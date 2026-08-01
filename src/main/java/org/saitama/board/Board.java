@@ -45,6 +45,30 @@ public final class Board {
     return Arrays.hashCode(squares);
   }
 
+  /**
+   * Renders the board from white's perspective, rank 8 at the top, using FEN piece symbols and dots
+   * for empty squares. Intended for debugging and command-line display, not for parsing.
+   */
+  @Override
+  public String toString() {
+    StringBuilder text = new StringBuilder();
+    for (int rankIndex = Rank.values().length - 1; rankIndex >= 0; rankIndex--) {
+      Rank rank = Rank.of(rankIndex);
+      text.append(rank.digit()).append(' ');
+      for (File file : File.values()) {
+        Piece piece = squares[Square.of(file, rank).index()];
+        text.append(' ').append(piece == null ? '.' : piece.fenSymbol());
+      }
+      text.append('\n');
+    }
+    text.append('\n').append(' ').append(' ');
+    for (File file : File.values()) {
+      text.append(' ').append(file.letter());
+    }
+    text.append('\n');
+    return text.toString();
+  }
+
   /** Assembles a {@link Board} one square at a time. */
   public static final class Builder {
 
