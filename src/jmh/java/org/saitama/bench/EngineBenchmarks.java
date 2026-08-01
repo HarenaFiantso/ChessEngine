@@ -71,6 +71,13 @@ public class EngineBenchmarks {
     return Zobrist.of(middlegame);
   }
 
+  /** A fixed-depth search from the start with a fresh transposition table per call. */
+  @Benchmark
+  public org.saitama.search.SearchResult searchDepthFour() {
+    return new org.saitama.search.AlphaBetaSearch(new ClassicalEvaluator())
+        .search(startingPosition, 4);
+  }
+
   /** The rules pipeline end to end: perft three from the start. */
   @Benchmark
   public long perftThree() {
