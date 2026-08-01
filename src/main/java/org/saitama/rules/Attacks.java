@@ -23,10 +23,6 @@ import org.saitama.board.Square;
  */
 public final class Attacks {
 
-  private static final int[][] KNIGHT_JUMPS = {
-    {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2}, {1, -2}, {1, 2}, {2, -1}, {2, 1}
-  };
-
   private Attacks() {}
 
   /** Returns whether any piece of {@code attacker} attacks {@code square} on {@code board}. */
@@ -77,7 +73,7 @@ public final class Attacks {
 
   private static boolean attackedByKnight(Board board, Square square, Color attacker) {
     Piece knight = Piece.of(attacker, PieceType.KNIGHT);
-    for (int[] jump : KNIGHT_JUMPS) {
+    for (int[] jump : Steps.KNIGHT_JUMPS) {
       if (holds(board, square.translated(jump[0], jump[1]), knight)) {
         return true;
       }
