@@ -54,6 +54,9 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
   }
 
   private int alphaBeta(Position position, int depth, int alpha, int beta, int ply) {
+    if (depth == 0) {
+      return quiescence(position, alpha, beta, ply);
+    }
     nodes++;
     List<Move> moves = MoveGenerator.legalMoves(position);
     if (moves.isEmpty()) {
@@ -62,12 +65,44 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     if (position.halfmoveClock() >= FIFTY_MOVE_HALFMOVE_LIMIT) {
       return 0;
     }
-    if (depth == 0) {
-      return evaluator.evaluate(position);
-    }
+
     int best = -Scores.INFINITY;
     for (Move move : MoveOrdering.byPromise(position, moves)) {
       best = Math.max(best, -alphaBeta(position.apply(move), depth - 1, -beta, -alpha, ply + 1));
+      if (best >= beta) {
+        return best;
+      }
+      alpha = Math.max(alpha, best);
+    }
+    return best;
+  }
+
+  private int quiescence(Position position, int alpha, int beta, int ply) {
+    nodes++;
+    List<Move> moves = MoveGenerator.legalMoves(position);
+    if (moves.isEmpty()) {
+      return Attacks.isInCheck(position) ? -(Scores.MATE - ply) : 0;
+    }
+    if (position.halfmoveClock() >= FIFTY_MOVE_HALFMOVE_LIMIT) {
+      return 0;
+    }
+    boolean inCheck = Attacks.isInCheck(position);
+    int best;
+    if (inCheck) {
+      best = -Scores.INFINITY;
+    } else {
+      best = evaluator.evaluate(position);
+      if (best >= beta) {
+        return best;
+      }
+      alpha = Math.max(alpha, best);
+    }
+    List<Move> candidates =
+        inCheck
+            ? moves
+            : moves.stream().filter(move -> MoveOrdering.isCapture(position, move)).toList();
+    for (Move move : MoveOrdering.byPromise(position, candidates)) {
+      best = Math.max(best, -quiescence(position.apply(move), -beta, -alpha, ply + 1));
       if (best >= beta) {
         return best;
       }

@@ -15,7 +15,9 @@ import org.saitama.rules.MoveGenerator;
  *
  * <p>The tree is explored exhaustively, which makes this algorithm the reference implementation
  * that pruning variants are checked against, and far too slow to play with beyond shallow depths.
- * Instances are not thread-safe; each search runs on one thread.
+ * Leaves are judged through the same capture-resolving quiescence policy as the pruning search, so
+ * the two remain score-identical and differ only in how much of the tree they visit. Instances are
+ * not thread-safe; each search runs on one thread.
  */
 public final class NegamaxSearch implements SearchAlgorithm {
 
@@ -52,6 +54,9 @@ public final class NegamaxSearch implements SearchAlgorithm {
   }
 
   private int negamax(Position position, int depth, int ply) {
+    if (depth == 0) {
+      return quiescence(position, ply);
+    }
     nodes++;
     List<Move> moves = MoveGenerator.legalMoves(position);
     if (moves.isEmpty()) {
@@ -60,12 +65,28 @@ public final class NegamaxSearch implements SearchAlgorithm {
     if (position.halfmoveClock() >= FIFTY_MOVE_HALFMOVE_LIMIT) {
       return 0;
     }
-    if (depth == 0) {
-      return evaluator.evaluate(position);
-    }
     int best = -Scores.INFINITY;
     for (Move move : moves) {
       best = Math.max(best, -negamax(position.apply(move), depth - 1, ply + 1));
+    }
+    return best;
+  }
+
+  private int quiescence(Position position, int ply) {
+    nodes++;
+    List<Move> moves = MoveGenerator.legalMoves(position);
+    if (moves.isEmpty()) {
+      return Attacks.isInCheck(position) ? -(Scores.MATE - ply) : 0;
+    }
+    if (position.halfmoveClock() >= FIFTY_MOVE_HALFMOVE_LIMIT) {
+      return 0;
+    }
+    boolean inCheck = Attacks.isInCheck(position);
+    int best = inCheck ? -Scores.INFINITY : evaluator.evaluate(position);
+    for (Move move : moves) {
+      if (inCheck || MoveOrdering.isCapture(position, move)) {
+        best = Math.max(best, -quiescence(position.apply(move), ply + 1));
+      }
     }
     return best;
   }

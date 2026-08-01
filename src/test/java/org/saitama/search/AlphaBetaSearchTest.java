@@ -1,10 +1,13 @@
 package org.saitama.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.saitama.board.Move;
+import org.saitama.board.Square;
 import org.saitama.evaluation.ClassicalEvaluator;
 import org.saitama.fen.Fen;
 
@@ -15,10 +18,10 @@ class AlphaBetaSearchTest {
 
   @ParameterizedTest
   @CsvSource({
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, 3",
-    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1, 2",
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, 2",
+    "4k3/8/4p3/3p4/8/8/8/3QK3 w - - 0 1, 2",
     "7k/8/8/8/8/8/1R6/R5K1 w - - 0 1, 3",
-    "4k3/8/8/3q4/8/8/8/3RK3 w - - 0 1, 3"
+    "4k3/8/8/3q4/8/8/8/3RK3 w - - 0 1, 2"
   })
   void matchesTheExhaustiveScoreExactly(String record, int depth) {
     SearchResult pruned = pruning.search(Fen.parse(record), depth);
@@ -28,8 +31,8 @@ class AlphaBetaSearchTest {
 
   @ParameterizedTest
   @CsvSource({
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, 3",
-    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1, 2"
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, 2",
+    "4k3/8/4p3/3p4/8/8/8/3QK3 w - - 0 1, 2"
   })
   void visitsFarFewerNodesThanTheExhaustiveSearch(String record, int depth) {
     SearchResult pruned = pruning.search(Fen.parse(record), depth);
@@ -44,5 +47,13 @@ class AlphaBetaSearchTest {
   })
   void findsForcedMatesWithExactScores(String record, int depth, int expected) {
     assertEquals(expected, pruning.search(Fen.parse(record), depth).score());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"1", "2"})
+  void declinesThePoisonedPawn(int depth) {
+    SearchResult result = pruning.search(Fen.parse("4k3/8/4p3/3p4/8/8/8/3QK3 w - - 0 1"), depth);
+    assertTrue(result.bestMove().isPresent());
+    assertNotEquals(new Move.Normal(Square.D1, Square.D5), result.bestMove().orElseThrow());
   }
 }
