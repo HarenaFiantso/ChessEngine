@@ -3,12 +3,12 @@ package org.saitama.rules;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import org.saitama.board.Board;
 import org.saitama.board.Color;
 import org.saitama.board.Direction;
 import org.saitama.board.Piece;
+import org.saitama.board.PiecePlacement;
 import org.saitama.board.PieceType;
-import org.saitama.board.Position;
+import org.saitama.board.PositionView;
 import org.saitama.board.Square;
 
 /**
@@ -26,7 +26,7 @@ public final class Attacks {
   private Attacks() {}
 
   /** Returns whether any piece of {@code attacker} attacks {@code square} on {@code board}. */
-  public static boolean isAttacked(Board board, Square square, Color attacker) {
+  public static boolean isAttacked(PiecePlacement board, Square square, Color attacker) {
     Objects.requireNonNull(board, "board");
     Objects.requireNonNull(square, "square");
     Objects.requireNonNull(attacker, "attacker");
@@ -38,9 +38,9 @@ public final class Attacks {
   }
 
   /** Returns whether the side to move's king stands attacked in {@code position}. */
-  public static boolean isInCheck(Position position) {
+  public static boolean isInCheck(PositionView position) {
     Objects.requireNonNull(position, "position");
-    return isInCheck(position.board(), position.sideToMove());
+    return isInCheck(position, position.sideToMove());
   }
 
   /**
@@ -48,26 +48,26 @@ public final class Attacks {
    *
    * @throws IllegalStateException if {@code side} has no king on the board
    */
-  public static boolean isInCheck(Board board, Color side) {
+  public static boolean isInCheck(PiecePlacement board, Color side) {
     Objects.requireNonNull(board, "board");
     Objects.requireNonNull(side, "side");
     return isAttacked(board, kingSquare(board, side), side.opposite());
   }
 
-  private static Square kingSquare(Board board, Color side) {
+  private static Square kingSquare(PiecePlacement board, Color side) {
     return board
         .kingSquare(side)
         .orElseThrow(() -> new IllegalStateException(side + " has no king on the board"));
   }
 
-  private static boolean attackedByPawn(Board board, Square square, Color attacker) {
+  private static boolean attackedByPawn(PiecePlacement board, Square square, Color attacker) {
     int towardAttacker = attacker == Color.WHITE ? -1 : 1;
     Piece pawn = Piece.of(attacker, PieceType.PAWN);
     return holds(board, square.translated(-1, towardAttacker), pawn)
         || holds(board, square.translated(1, towardAttacker), pawn);
   }
 
-  private static boolean attackedByKnight(Board board, Square square, Color attacker) {
+  private static boolean attackedByKnight(PiecePlacement board, Square square, Color attacker) {
     Piece knight = Piece.of(attacker, PieceType.KNIGHT);
     for (int[] jump : Steps.KNIGHT_JUMPS) {
       if (holds(board, square.translated(jump[0], jump[1]), knight)) {
@@ -77,7 +77,7 @@ public final class Attacks {
     return false;
   }
 
-  private static boolean attackedByKing(Board board, Square square, Color attacker) {
+  private static boolean attackedByKing(PiecePlacement board, Square square, Color attacker) {
     Piece king = Piece.of(attacker, PieceType.KING);
     for (Direction direction : Direction.values()) {
       if (holds(board, square.neighbor(direction), king)) {
@@ -88,7 +88,11 @@ public final class Attacks {
   }
 
   private static boolean attackedAlongRays(
-      Board board, Square square, Color attacker, List<Direction> directions, PieceType slider) {
+      PiecePlacement board,
+      Square square,
+      Color attacker,
+      List<Direction> directions,
+      PieceType slider) {
     for (Direction direction : directions) {
       Optional<Square> step = square.neighbor(direction);
       while (step.isPresent()) {
@@ -107,7 +111,7 @@ public final class Attacks {
     return false;
   }
 
-  private static boolean holds(Board board, Optional<Square> square, Piece piece) {
+  private static boolean holds(PiecePlacement board, Optional<Square> square, Piece piece) {
     return square.flatMap(board::pieceOn).filter(piece::equals).isPresent();
   }
 }

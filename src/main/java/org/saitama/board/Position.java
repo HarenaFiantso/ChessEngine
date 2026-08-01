@@ -27,7 +27,8 @@ public record Position(
     CastlingRights castlingRights,
     Optional<Square> enPassantTarget,
     int halfmoveClock,
-    int fullmoveNumber) {
+    int fullmoveNumber)
+    implements PositionView {
 
   /** Validates the component and cross-component invariants described above. */
   public Position {
@@ -42,6 +43,21 @@ public record Position(
       throw new IllegalArgumentException("Fullmove number starts at one: " + fullmoveNumber);
     }
     enPassantTarget.ifPresent(target -> requireConsistentEnPassantRank(sideToMove, target));
+  }
+
+  @Override
+  public Optional<Piece> pieceOn(Square square) {
+    return board.pieceOn(square);
+  }
+
+  @Override
+  public Optional<Square> kingSquare(Color side) {
+    return board.kingSquare(side);
+  }
+
+  @Override
+  public boolean castlingAllowed(CastlingRight right) {
+    return castlingRights.allows(right);
   }
 
   /**
