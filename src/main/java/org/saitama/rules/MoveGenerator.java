@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import org.saitama.board.Board;
 import org.saitama.board.CastlingRight;
 import org.saitama.board.Color;
 import org.saitama.board.Direction;
@@ -13,6 +12,7 @@ import org.saitama.board.Move;
 import org.saitama.board.Piece;
 import org.saitama.board.PieceType;
 import org.saitama.board.Position;
+import org.saitama.board.PositionView;
 import org.saitama.board.Rank;
 import org.saitama.board.Square;
 
@@ -32,18 +32,28 @@ public final class MoveGenerator {
   /** Returns every legal move for the side to move in {@code position}. */
   public static List<Move> legalMoves(Position position) {
     Objects.requireNonNull(position, "position");
-    List<Move> moves = new ArrayList<>();
-    for (Square from : Square.values()) {
-      Optional<Piece> occupant = position.board().pieceOn(from);
-      if (occupant.isPresent() && occupant.get().color() == position.sideToMove()) {
-        moves.addAll(pseudoLegalMoves(position, occupant.get(), from));
-      }
-    }
+    List<Move> moves = new ArrayList<>(pseudoLegalMoves(position));
     moves.removeIf(move -> leavesOwnKingInCheck(position, move));
     return List.copyOf(moves);
   }
 
-  private static List<Move> pseudoLegalMoves(Position position, Piece piece, Square from) {
+  /**
+   * Returns every pseudo-legal move for the side to move: piece patterns are respected but the
+   * mover's king may be left attacked. Callers pair this with make, a check test, and unmake.
+   */
+  public static List<Move> pseudoLegalMoves(PositionView position) {
+    Objects.requireNonNull(position, "position");
+    List<Move> moves = new ArrayList<>();
+    for (Square from : Square.values()) {
+      Optional<Piece> occupant = position.pieceOn(from);
+      if (occupant.isPresent() && occupant.get().color() == position.sideToMove()) {
+        moves.addAll(pseudoLegalMoves(position, occupant.get(), from));
+      }
+    }
+    return moves;
+  }
+
+  private static List<Move> pseudoLegalMoves(PositionView position, Piece piece, Square from) {
     return switch (piece.type()) {
       case KNIGHT -> knightMoves(position, from);
       case KING -> kingMoves(position, from);
@@ -54,7 +64,7 @@ public final class MoveGenerator {
     };
   }
 
-  private static List<Move> knightMoves(Position position, Square from) {
+  private static List<Move> knightMoves(PositionView position, Square from) {
     List<Move> moves = new ArrayList<>();
     for (int[] jump : Steps.KNIGHT_JUMPS) {
       Optional<Square> destination = from.translated(jump[0], jump[1]);
@@ -65,7 +75,7 @@ public final class MoveGenerator {
     return moves;
   }
 
-  private static List<Move> kingMoves(Position position, Square from) {
+  private static List<Move> kingMoves(PositionView position, Square from) {
     List<Move> moves = new ArrayList<>();
     for (Direction direction : Direction.values()) {
       Optional<Square> destination = from.neighbor(direction);
@@ -77,11 +87,10 @@ public final class MoveGenerator {
     return moves;
   }
 
-  private static void addCastlingMoves(Position position, Square from, List<Move> moves) {
+  private static void addCastlingMoves(PositionView position, Square from, List<Move> moves) {
     Color mover = position.sideToMove();
     Rank home = mover == Color.WHITE ? Rank.ONE : Rank.EIGHT;
-    if (from != Square.of(File.E, home)
-        || Attacks.isAttacked(position.board(), from, mover.opposite())) {
+    if (from != Square.of(File.E, home) || Attacks.isAttacked(position, from, mover.opposite())) {
       return;
     }
     CastlingRight kingside =
@@ -97,33 +106,33 @@ public final class MoveGenerator {
   }
 
   private static boolean mayCastle(
-      Position position, Rank home, CastlingRight right, File rookFile, List<File> emptyFiles) {
-    if (!position.castlingRights().allows(right)) {
+      PositionView position, Rank home, CastlingRight right, File rookFile, List<File> emptyFiles) {
+    if (!position.castlingAllowed(right)) {
       return false;
     }
-    Board board = position.board();
+
     Piece rook = Piece.of(position.sideToMove(), PieceType.ROOK);
-    if (board.pieceOn(Square.of(rookFile, home)).filter(rook::equals).isEmpty()) {
+    if (position.pieceOn(Square.of(rookFile, home)).filter(rook::equals).isEmpty()) {
       return false;
     }
     for (File file : emptyFiles) {
-      if (board.pieceOn(Square.of(file, home)).isPresent()) {
+      if (position.pieceOn(Square.of(file, home)).isPresent()) {
         return false;
       }
     }
     File transitFile = rookFile == File.H ? File.F : File.D;
     return !Attacks.isAttacked(
-        board, Square.of(transitFile, home), position.sideToMove().opposite());
+        position, Square.of(transitFile, home), position.sideToMove().opposite());
   }
 
   private static List<Move> sliderMoves(
-      Position position, Square from, List<Direction> directions) {
+      PositionView position, Square from, List<Direction> directions) {
     List<Move> moves = new ArrayList<>();
     for (Direction direction : directions) {
       Optional<Square> step = from.neighbor(direction);
       while (step.isPresent()) {
         Square to = step.get();
-        Optional<Piece> occupant = position.board().pieceOn(to);
+        Optional<Piece> occupant = position.pieceOn(to);
         if (occupant.isPresent()) {
           if (occupant.get().color() != position.sideToMove()) {
             moves.add(new Move.Normal(from, to));
@@ -137,25 +146,25 @@ public final class MoveGenerator {
     return moves;
   }
 
-  private static List<Move> queenMoves(Position position, Square from) {
+  private static List<Move> queenMoves(PositionView position, Square from) {
     List<Move> moves = sliderMoves(position, from, Direction.ORTHOGONAL);
     moves.addAll(sliderMoves(position, from, Direction.DIAGONAL));
     return moves;
   }
 
-  private static List<Move> pawnMoves(Position position, Square from) {
+  private static List<Move> pawnMoves(PositionView position, Square from) {
     List<Move> moves = new ArrayList<>();
     Color mover = position.sideToMove();
-    Board board = position.board();
+
     int forward = mover == Color.WHITE ? 1 : -1;
     Optional<Square> oneAhead = from.translated(0, forward);
-    if (oneAhead.isPresent() && board.pieceOn(oneAhead.get()).isEmpty()) {
+    if (oneAhead.isPresent() && position.pieceOn(oneAhead.get()).isEmpty()) {
       addAdvanceOrPromotions(from, oneAhead.get(), moves);
       Rank startRank = mover == Color.WHITE ? Rank.TWO : Rank.SEVEN;
       Optional<Square> twoAhead = from.translated(0, 2 * forward);
       if (from.rank() == startRank
           && twoAhead.isPresent()
-          && board.pieceOn(twoAhead.get()).isEmpty()) {
+          && position.pieceOn(twoAhead.get()).isEmpty()) {
         moves.add(new Move.Normal(from, twoAhead.get()));
       }
     }
@@ -167,7 +176,7 @@ public final class MoveGenerator {
       Square to = diagonal.get();
       if (position.enPassantTarget().filter(to::equals).isPresent()) {
         moves.add(new Move.EnPassant(from, to));
-      } else if (board.pieceOn(to).filter(piece -> piece.color() != mover).isPresent()) {
+      } else if (position.pieceOn(to).filter(piece -> piece.color() != mover).isPresent()) {
         addAdvanceOrPromotions(from, to, moves);
       }
     }
@@ -185,8 +194,8 @@ public final class MoveGenerator {
     }
   }
 
-  private static boolean canLandOn(Position position, Square destination) {
-    Optional<Piece> occupant = position.board().pieceOn(destination);
+  private static boolean canLandOn(PositionView position, Square destination) {
+    Optional<Piece> occupant = position.pieceOn(destination);
     return occupant.isEmpty() || occupant.get().color() != position.sideToMove();
   }
 

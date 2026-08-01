@@ -11,7 +11,7 @@ import java.util.Optional;
  * side to move, castling rights, and the rest of the game state belong to the forthcoming position
  * type. Instances never change after construction and are therefore freely shareable.
  */
-public final class Board {
+public final class Board implements PiecePlacement {
 
   private final Piece[] squares;
   private final Square whiteKingSquare;
@@ -33,13 +33,13 @@ public final class Board {
     return new Builder();
   }
 
-  /** Returns the piece standing on {@code square}, or empty if the square is vacant. */
+  @Override
   public Optional<Piece> pieceOn(Square square) {
     Objects.requireNonNull(square, "square");
     return Optional.ofNullable(squares[square.index()]);
   }
 
-  /** Returns the square of {@code side}'s king, or empty if that king is off the board. */
+  @Override
   public Optional<Square> kingSquare(Color side) {
     Objects.requireNonNull(side, "side");
     return Optional.ofNullable(side == Color.WHITE ? whiteKingSquare : blackKingSquare);
