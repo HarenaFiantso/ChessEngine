@@ -1,6 +1,7 @@
 plugins {
     application
     checkstyle
+    jacoco
     id("com.diffplug.spotless") version "8.9.0"
     id("net.ltgt.errorprone") version "5.1.0"
 }
@@ -21,6 +22,10 @@ application {
 checkstyle {
     toolVersion = "13.9.0"
     maxWarnings = 0
+}
+
+jacoco {
+    toolVersion = "0.8.15"
 }
 
 repositories {
@@ -47,7 +52,15 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
     testLogging {
         events("passed", "skipped", "failed")
+    }
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
     }
 }
