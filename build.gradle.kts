@@ -3,6 +3,7 @@ plugins {
     checkstyle
     jacoco
     id("com.diffplug.spotless") version "8.9.0"
+    id("me.champeau.jmh") version "0.7.3"
     id("net.ltgt.errorprone") version "5.1.0"
     id("com.github.spotbugs") version "6.5.9"
 }
@@ -35,6 +36,14 @@ jacoco {
 
 spotbugs {
     toolVersion = "4.10.3"
+}
+
+jmh {
+    fork = 1
+    warmupIterations = 2
+    iterations = 3
+    warmup = "1s"
+    timeOnIteration = "1s"
 }
 
 repositories {

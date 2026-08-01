@@ -97,4 +97,15 @@ class BoardTest {
     assertThrows(NullPointerException.class, () -> Board.empty().withPiece(Square.E1, null));
     assertThrows(NullPointerException.class, () -> Board.empty().withoutPiece(null));
   }
+
+  @Test
+  void tracksKingSquares() {
+    assertEquals(Optional.empty(), Board.empty().kingSquare(Color.WHITE));
+    Board board =
+        Board.builder().put(Square.E1, Piece.WHITE_KING).put(Square.C8, Piece.BLACK_KING).build();
+    assertEquals(Optional.of(Square.E1), board.kingSquare(Color.WHITE));
+    assertEquals(Optional.of(Square.C8), board.kingSquare(Color.BLACK));
+    Board moved = board.withoutPiece(Square.E1).withPiece(Square.E2, Piece.WHITE_KING);
+    assertEquals(Optional.of(Square.E2), moved.kingSquare(Color.WHITE));
+  }
 }
