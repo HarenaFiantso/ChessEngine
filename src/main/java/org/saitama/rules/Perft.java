@@ -1,7 +1,9 @@
 package org.saitama.rules;
 
 import java.util.Objects;
+import org.saitama.board.Color;
 import org.saitama.board.Move;
+import org.saitama.board.MutablePosition;
 import org.saitama.board.Position;
 
 /**
@@ -27,12 +29,21 @@ public final class Perft {
     if (depth < 0) {
       throw new IllegalArgumentException("Depth must not be negative: " + depth);
     }
+    return count(MutablePosition.copyOf(position), depth);
+  }
+
+  private static long count(MutablePosition position, int depth) {
     if (depth == 0) {
       return 1;
     }
     long nodes = 0;
-    for (Move move : MoveGenerator.legalMoves(position)) {
-      nodes += count(position.apply(move), depth - 1);
+    Color mover = position.sideToMove();
+    for (Move move : MoveGenerator.pseudoLegalMoves(position)) {
+      MutablePosition.Undo undo = position.make(move);
+      if (!Attacks.isInCheck(position, mover)) {
+        nodes += count(position, depth - 1);
+      }
+      position.unmake(move, undo);
     }
     return nodes;
   }

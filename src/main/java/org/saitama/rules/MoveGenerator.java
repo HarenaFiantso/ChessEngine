@@ -9,9 +9,9 @@ import org.saitama.board.Color;
 import org.saitama.board.Direction;
 import org.saitama.board.File;
 import org.saitama.board.Move;
+import org.saitama.board.MutablePosition;
 import org.saitama.board.Piece;
 import org.saitama.board.PieceType;
-import org.saitama.board.Position;
 import org.saitama.board.PositionView;
 import org.saitama.board.Rank;
 import org.saitama.board.Square;
@@ -30,10 +30,18 @@ public final class MoveGenerator {
   private MoveGenerator() {}
 
   /** Returns every legal move for the side to move in {@code position}. */
-  public static List<Move> legalMoves(Position position) {
+  public static List<Move> legalMoves(PositionView position) {
     Objects.requireNonNull(position, "position");
     List<Move> moves = new ArrayList<>(pseudoLegalMoves(position));
-    moves.removeIf(move -> leavesOwnKingInCheck(position, move));
+    MutablePosition scratch = MutablePosition.copyOf(position);
+    Color mover = position.sideToMove();
+    moves.removeIf(
+        move -> {
+          MutablePosition.Undo undo = scratch.make(move);
+          boolean illegal = Attacks.isInCheck(scratch, mover);
+          scratch.unmake(move, undo);
+          return illegal;
+        });
     return List.copyOf(moves);
   }
 
@@ -197,9 +205,5 @@ public final class MoveGenerator {
   private static boolean canLandOn(PositionView position, Square destination) {
     Optional<Piece> occupant = position.pieceOn(destination);
     return occupant.isEmpty() || occupant.get().color() != position.sideToMove();
-  }
-
-  private static boolean leavesOwnKingInCheck(Position position, Move move) {
-    return Attacks.isInCheck(position.apply(move).board(), position.sideToMove());
   }
 }
