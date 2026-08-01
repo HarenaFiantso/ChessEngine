@@ -45,6 +45,8 @@ SearchResult is the instrument those measurements will use.
 
 ## References
 
-- Chess Programming Wiki, Negamax and Alpha-Beta:
+- Chess Programming Wiki, Negamax, Alpha-Beta, Move Ordering, Quiescence:
   https://www.chessprogramming.org/Negamax
   https://www.chessprogramming.org/Alpha-Beta
+  https://www.chessprogramming.org/Move_Ordering
+  https://www.chessprogramming.org/Quiescence_Search
