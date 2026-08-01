@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import org.saitama.board.Direction;
 import org.saitama.board.Move;
 import org.saitama.board.Piece;
 import org.saitama.board.Position;
@@ -39,7 +40,8 @@ public final class MoveGenerator {
   private static List<Move> pseudoLegalMoves(Position position, Piece piece, Square from) {
     return switch (piece.type()) {
       case KNIGHT -> knightMoves(position, from);
-      case PAWN, BISHOP, ROOK, QUEEN, KING -> List.of();
+      case KING -> kingMoves(position, from);
+      case PAWN, BISHOP, ROOK, QUEEN -> List.of();
     };
   }
 
@@ -47,6 +49,17 @@ public final class MoveGenerator {
     List<Move> moves = new ArrayList<>();
     for (int[] jump : Steps.KNIGHT_JUMPS) {
       Optional<Square> destination = from.translated(jump[0], jump[1]);
+      if (destination.isPresent() && canLandOn(position, destination.get())) {
+        moves.add(new Move.Normal(from, destination.get()));
+      }
+    }
+    return moves;
+  }
+
+  private static List<Move> kingMoves(Position position, Square from) {
+    List<Move> moves = new ArrayList<>();
+    for (Direction direction : Direction.values()) {
+      Optional<Square> destination = from.neighbor(direction);
       if (destination.isPresent() && canLandOn(position, destination.get())) {
         moves.add(new Move.Normal(from, destination.get()));
       }

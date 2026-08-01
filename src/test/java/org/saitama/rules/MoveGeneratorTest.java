@@ -43,4 +43,15 @@ class MoveGeneratorTest {
   void rejectsNullPositions() {
     assertThrows(NullPointerException.class, () -> MoveGenerator.legalMoves(null));
   }
+
+  @ParameterizedTest
+  @CsvSource({
+    "4k3/8/8/8/8/8/8/4K3 w - - 0 1, E1, 5",
+    "4k3/8/8/8/8/8/8/K7 w - - 0 1, A1, 3",
+    "8/8/8/3k4/8/3K4/8/8 w - - 0 1, D3, 5",
+    "4k3/8/8/8/8/8/4r3/4K3 w - - 0 1, E1, 3"
+  })
+  void generatesKingMoves(String record, Square from, int expectedCount) {
+    assertEquals(expectedCount, movesFrom(record, from).size());
+  }
 }
