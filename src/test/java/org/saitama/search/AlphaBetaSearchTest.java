@@ -2,6 +2,7 @@ package org.saitama.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -74,5 +75,21 @@ class AlphaBetaSearchTest {
     SearchResult result = withTable.search(Fen.parse("4k3/8/4p3/3p4/8/8/8/3QK3 w - - 0 1"), depth);
     assertTrue(result.bestMove().isPresent());
     assertNotEquals(new Move.Normal(Square.D1, Square.D5), result.bestMove().orElseThrow());
+  }
+
+  @Test
+  void firingStopSignalsUnwindTheSearch() {
+    AlphaBetaSearch search = new AlphaBetaSearch(new ClassicalEvaluator());
+    assertThrows(SearchAborted.class, () -> search.search(Fen.parse(Fen.STARTING), 4, () -> true));
+  }
+
+  @Test
+  void silentStopSignalsChangeNothing() {
+    AlphaBetaSearch search = new AlphaBetaSearch(new ClassicalEvaluator());
+    SearchResult limited = search.search(Fen.parse(Fen.STARTING), 2, () -> false);
+    SearchResult plain =
+        new AlphaBetaSearch(new ClassicalEvaluator()).search(Fen.parse(Fen.STARTING), 2);
+    assertEquals(plain.score(), limited.score());
+    assertEquals(plain.bestMove(), limited.bestMove());
   }
 }
