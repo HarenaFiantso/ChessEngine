@@ -19,7 +19,7 @@ benchmarks or do not get merged.
 | ClassicalEvaluator.evaluate | 0.18 us |
 | Zobrist.of | 0.16 us |
 | MoveGenerator.legalMoves (Kiwipete) | 15.2 us |
-| Perft(3) from the start | 3.5 ms |
+| Perft(3) from the start | 2.8 ms |
 | Alpha-beta depth 4, fresh table | 65 ms |
 
 Legal move generation dominates everything built on it. Its cost is the
@@ -41,6 +41,20 @@ middlegame means legalMoves costs about fifty apply-and-check round trips.
   depth four. No effect; the JIT had already dissolved the abstraction. The
   clearer stream version stays, and the negative result is recorded here so
   the experiment is not repeated.
+
+## Make and unmake
+
+MutablePosition is the engine's working state: moves are made on one
+position and unmade on backtrack, with the Zobrist key maintained by XOR as
+features change. Its correctness anchors to an oracle rather than caution:
+make must produce exactly what Position.apply produces for every legal move
+of stress positions, the incremental key must equal the recomputed one, and
+the twenty perft counts must survive the switch. Getting the speed took
+three measured rounds: the first wiring regressed every benchmark because
+make paid for two set copies per move; int-bitmask rights made the path
+allocation-free. Perft(3) improved from 3.53ms to 2.83ms; legalMoves stayed
+at par because the per-call scratch copy offsets the per-candidate gain;
+search awaits its own migration, which this infrastructure now enables.
 
 ## The roadmap this motivates
 
