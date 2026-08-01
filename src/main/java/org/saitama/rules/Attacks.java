@@ -55,13 +55,9 @@ public final class Attacks {
   }
 
   private static Square kingSquare(Board board, Color side) {
-    Piece king = Piece.of(side, PieceType.KING);
-    for (Square square : Square.values()) {
-      if (board.pieceOn(square).filter(king::equals).isPresent()) {
-        return square;
-      }
-    }
-    throw new IllegalStateException(side + " has no king on the board");
+    return board
+        .kingSquare(side)
+        .orElseThrow(() -> new IllegalStateException(side + " has no king on the board"));
   }
 
   private static boolean attackedByPawn(Board board, Square square, Color attacker) {

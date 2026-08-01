@@ -14,14 +14,18 @@ import java.util.Optional;
 public final class Board {
 
   private final Piece[] squares;
+  private final Square whiteKingSquare;
+  private final Square blackKingSquare;
 
-  private Board(Piece[] squares) {
+  private Board(Piece[] squares, Square whiteKingSquare, Square blackKingSquare) {
     this.squares = squares;
+    this.whiteKingSquare = whiteKingSquare;
+    this.blackKingSquare = blackKingSquare;
   }
 
   /** Returns a board with no pieces on it. */
   public static Board empty() {
-    return new Board(new Piece[Square.values().length]);
+    return new Board(new Piece[Square.values().length], null, null);
   }
 
   /** Returns a builder that assembles a placement square by square. */
@@ -35,13 +39,29 @@ public final class Board {
     return Optional.ofNullable(squares[square.index()]);
   }
 
+  /** Returns the square of {@code side}'s king, or empty if that king is off the board. */
+  public Optional<Square> kingSquare(Color side) {
+    Objects.requireNonNull(side, "side");
+    return Optional.ofNullable(side == Color.WHITE ? whiteKingSquare : blackKingSquare);
+  }
+
   /** Returns a board identical to this one except that {@code piece} stands on {@code square}. */
   public Board withPiece(Square square, Piece piece) {
     Objects.requireNonNull(square, "square");
     Objects.requireNonNull(piece, "piece");
     Piece[] updated = squares.clone();
     updated[square.index()] = piece;
-    return new Board(updated);
+    return new Board(
+        updated,
+        kingAfterPlacement(whiteKingSquare, Piece.WHITE_KING, square, piece),
+        kingAfterPlacement(blackKingSquare, Piece.BLACK_KING, square, piece));
+  }
+
+  private static Square kingAfterPlacement(Square current, Piece king, Square square, Piece piece) {
+    if (piece == king) {
+      return square;
+    }
+    return square == current ? null : current;
   }
 
   /** Returns a board identical to this one except that {@code square} is vacant. */
@@ -52,7 +72,10 @@ public final class Board {
     }
     Piece[] updated = squares.clone();
     updated[square.index()] = null;
-    return new Board(updated);
+    return new Board(
+        updated,
+        square == whiteKingSquare ? null : whiteKingSquare,
+        square == blackKingSquare ? null : blackKingSquare);
   }
 
   @Override
@@ -93,6 +116,8 @@ public final class Board {
   public static final class Builder {
 
     private final Piece[] squares = new Piece[Square.values().length];
+    private Square whiteKingSquare;
+    private Square blackKingSquare;
 
     private Builder() {}
 
@@ -101,12 +126,14 @@ public final class Board {
       Objects.requireNonNull(square, "square");
       Objects.requireNonNull(piece, "piece");
       squares[square.index()] = piece;
+      whiteKingSquare = kingAfterPlacement(whiteKingSquare, Piece.WHITE_KING, square, piece);
+      blackKingSquare = kingAfterPlacement(blackKingSquare, Piece.BLACK_KING, square, piece);
       return this;
     }
 
     /** Returns the assembled board, leaving the builder reusable. */
     public Board build() {
-      return new Board(squares.clone());
+      return new Board(squares.clone(), whiteKingSquare, blackKingSquare);
     }
   }
 }
