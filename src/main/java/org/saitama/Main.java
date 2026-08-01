@@ -1,27 +1,29 @@
 package org.saitama;
 
-import java.util.List;
-import org.saitama.board.Move;
 import org.saitama.board.Position;
-import org.saitama.board.Square;
+import org.saitama.evaluation.ClassicalEvaluator;
 import org.saitama.fen.Fen;
-import org.saitama.rules.GameStatus;
+import org.saitama.search.AlphaBetaSearch;
+import org.saitama.search.SearchAlgorithm;
+import org.saitama.search.SearchResult;
 
 /** Command-line entry point of the chess engine. */
 public class Main {
   static void main() {
-    Position position = Fen.parse(Fen.STARTING);
-    List<Move> foolsMate =
-        List.of(
-            new Move.Normal(Square.F2, Square.F3),
-            new Move.Normal(Square.E7, Square.E5),
-            new Move.Normal(Square.G2, Square.G4),
-            new Move.Normal(Square.D8, Square.H4));
-    for (Move move : foolsMate) {
-      position = position.apply(move);
-    }
-    IO.println(position.board());
-    IO.println("After 1. f3 e5 2. g4 Qh4");
-    IO.println("Verdict: " + GameStatus.of(position));
+    SearchAlgorithm engine = new AlphaBetaSearch(new ClassicalEvaluator());
+    Position start = Fen.parse(Fen.STARTING);
+    report("Opening choice at depth 4", engine.search(start, 4));
+    Position mateInTwo = Fen.parse("7k/8/8/8/8/8/1R6/R5K1 w - - 0 1");
+    report("Mate-in-two puzzle at depth 3", engine.search(mateInTwo, 3));
+  }
+
+  private static void report(String label, SearchResult result) {
+    String move =
+        result
+            .bestMove()
+            .map(best -> best.from().algebraic() + best.to().algebraic())
+            .orElse("none");
+    IO.println(
+        label + ": " + move + " (score " + result.score() + ", " + result.nodes() + " nodes)");
   }
 }
