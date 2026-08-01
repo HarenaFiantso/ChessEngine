@@ -62,7 +62,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     if (bestMove.isEmpty()) {
       bestScore = Attacks.isInCheck(position) ? -Scores.MATE : 0;
     }
-    return new SearchResult(bestMove, bestScore, nodes);
+    return new SearchResult(bestMove, bestScore, nodes, depth);
   }
 
   private int alphaBeta(Position position, int depth, int alpha, int beta, int ply) {

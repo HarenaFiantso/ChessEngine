@@ -50,7 +50,7 @@ public final class NegamaxSearch implements SearchAlgorithm {
     if (bestMove.isEmpty()) {
       bestScore = Attacks.isInCheck(position) ? -Scores.MATE : 0;
     }
-    return new SearchResult(bestMove, bestScore, nodes);
+    return new SearchResult(bestMove, bestScore, nodes, depth);
   }
 
   private int negamax(Position position, int depth, int ply) {
