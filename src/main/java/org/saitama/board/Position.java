@@ -53,7 +53,6 @@ public record Position(
    * generation.
    *
    * @throws IllegalArgumentException if the move is mechanically impossible in this position
-   * @throws UnsupportedOperationException for move kinds whose application is not yet implemented
    */
   public Position apply(Move move) {
     Objects.requireNonNull(move, "move");
@@ -69,13 +68,93 @@ public record Position(
     }
     return switch (move) {
       case Move.Normal normal -> applyNormal(mover, normal);
-      case Move.Promotion _ ->
-          throw new UnsupportedOperationException("Promotion is not applied yet");
-      case Move.EnPassant _ ->
-          throw new UnsupportedOperationException("En passant is not applied yet");
-      case Move.Castling _ ->
-          throw new UnsupportedOperationException("Castling is not applied yet");
+      case Move.Promotion promotion -> applyPromotion(mover, promotion);
+      case Move.EnPassant enPassant -> applyEnPassant(mover, enPassant);
+      case Move.Castling castling -> applyCastling(mover, castling);
     };
+  }
+
+  private Position applyPromotion(Piece mover, Move.Promotion move) {
+    if (mover.type() != PieceType.PAWN) {
+      throw new IllegalArgumentException(
+          "Only pawns promote, not the " + mover.type() + " on " + move.from().algebraic());
+    }
+    Rank expectedFromRank = mover.color() == Color.WHITE ? Rank.SEVEN : Rank.TWO;
+    if (move.from().rank() != expectedFromRank) {
+      throw new IllegalArgumentException(
+          "A " + mover.color() + " pawn cannot promote from " + move.from().algebraic());
+    }
+    Optional<Piece> captured = board.pieceOn(move.to());
+    if (captured.isPresent() && captured.get().color() == sideToMove) {
+      throw new IllegalArgumentException(
+          "Cannot capture the friendly piece on " + move.to().algebraic());
+    }
+    return new Position(
+        board.withoutPiece(move.from()).withPiece(move.to(), Piece.of(sideToMove, move.promoted())),
+        sideToMove.opposite(),
+        castlingRightsAfterTouching(move.from(), move.to()),
+        Optional.empty(),
+        0,
+        fullmoveNumberAfter());
+  }
+
+  private Position applyEnPassant(Piece mover, Move.EnPassant move) {
+    if (mover.type() != PieceType.PAWN) {
+      throw new IllegalArgumentException(
+          "Only pawns capture en passant, not the "
+              + mover.type()
+              + " on "
+              + move.from().algebraic());
+    }
+    if (enPassantTarget.isEmpty() || enPassantTarget.get() != move.to()) {
+      throw new IllegalArgumentException(
+          "No en passant capture is available on " + move.to().algebraic());
+    }
+    Square capturedPawnSquare = Square.of(move.to().file(), move.from().rank());
+    Piece expectedVictim = Piece.of(sideToMove.opposite(), PieceType.PAWN);
+    if (board.pieceOn(capturedPawnSquare).filter(expectedVictim::equals).isEmpty()) {
+      throw new IllegalArgumentException(
+          "No enemy pawn stands on " + capturedPawnSquare.algebraic());
+    }
+    return new Position(
+        board
+            .withoutPiece(move.from())
+            .withoutPiece(capturedPawnSquare)
+            .withPiece(move.to(), mover),
+        sideToMove.opposite(),
+        castlingRights,
+        Optional.empty(),
+        0,
+        fullmoveNumberAfter());
+  }
+
+  private Position applyCastling(Piece mover, Move.Castling move) {
+    if (mover.type() != PieceType.KING) {
+      throw new IllegalArgumentException(
+          "Castling moves the king, not the " + mover.type() + " on " + move.from().algebraic());
+    }
+    Rank homeRank = sideToMove == Color.WHITE ? Rank.ONE : Rank.EIGHT;
+    if (move.from().rank() != homeRank) {
+      throw new IllegalArgumentException(sideToMove + " cannot castle on the opponent's back rank");
+    }
+    boolean kingside = move.to().file() == File.G;
+    Square rookFrom = Square.of(kingside ? File.H : File.A, homeRank);
+    Square rookTo = Square.of(kingside ? File.F : File.D, homeRank);
+    Piece rook = Piece.of(sideToMove, PieceType.ROOK);
+    if (board.pieceOn(rookFrom).filter(rook::equals).isEmpty()) {
+      throw new IllegalArgumentException("No friendly rook stands on " + rookFrom.algebraic());
+    }
+    return new Position(
+        board
+            .withoutPiece(move.from())
+            .withoutPiece(rookFrom)
+            .withPiece(move.to(), mover)
+            .withPiece(rookTo, rook),
+        sideToMove.opposite(),
+        castlingRightsAfterTouching(move.from(), rookFrom),
+        Optional.empty(),
+        halfmoveClock + 1,
+        fullmoveNumberAfter());
   }
 
   private Position applyNormal(Piece mover, Move.Normal move) {
