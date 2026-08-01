@@ -13,5 +13,6 @@ import org.saitama.board.Move;
  * @param bestMove the strongest move found, empty in checkmate and stalemate positions
  * @param score the score of {@code bestMove} from the side to move's point of view
  * @param nodes how many positions the search visited
+ * @param depth the deepest fully searched horizon backing {@code bestMove}
  */
-public record SearchResult(Optional<Move> bestMove, int score, long nodes) {}
+public record SearchResult(Optional<Move> bestMove, int score, long nodes, int depth) {}
