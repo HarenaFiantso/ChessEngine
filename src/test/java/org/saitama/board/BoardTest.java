@@ -2,6 +2,7 @@ package org.saitama.board;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Optional;
@@ -66,5 +67,34 @@ class BoardTest {
     Board board = Board.empty();
     assertEquals(board, board);
     assertNotEquals(board, new Object());
+  }
+
+  @Test
+  void withPieceCreatesAnUpdatedBoardAndLeavesTheOriginalUntouched() {
+    Board before = Board.empty();
+    Board after = before.withPiece(Square.E4, Piece.WHITE_PAWN);
+    assertEquals(Optional.empty(), before.pieceOn(Square.E4));
+    assertEquals(Optional.of(Piece.WHITE_PAWN), after.pieceOn(Square.E4));
+  }
+
+  @Test
+  void withoutPieceVacatesTheSquare() {
+    Board before = Board.builder().put(Square.E4, Piece.WHITE_PAWN).build();
+    Board after = before.withoutPiece(Square.E4);
+    assertEquals(Optional.of(Piece.WHITE_PAWN), before.pieceOn(Square.E4));
+    assertEquals(Optional.empty(), after.pieceOn(Square.E4));
+  }
+
+  @Test
+  void withoutPieceOnVacantSquareReturnsTheSameInstance() {
+    Board board = Board.empty();
+    assertSame(board, board.withoutPiece(Square.E4));
+  }
+
+  @Test
+  void nondestructiveUpdatesRejectNullArguments() {
+    assertThrows(NullPointerException.class, () -> Board.empty().withPiece(null, Piece.WHITE_KING));
+    assertThrows(NullPointerException.class, () -> Board.empty().withPiece(Square.E1, null));
+    assertThrows(NullPointerException.class, () -> Board.empty().withoutPiece(null));
   }
 }

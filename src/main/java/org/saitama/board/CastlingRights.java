@@ -1,5 +1,7 @@
 package org.saitama.board;
 
+import java.util.EnumSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -40,5 +42,17 @@ public record CastlingRights(Set<CastlingRight> rights) {
   /** Returns whether the given right is retained. */
   public boolean allows(CastlingRight right) {
     return rights.contains(right);
+  }
+
+  /** Returns rights identical to these except that {@code right} is no longer retained. */
+  public CastlingRights without(CastlingRight right) {
+    Objects.requireNonNull(right, "right");
+    if (!allows(right)) {
+      return this;
+    }
+    EnumSet<CastlingRight> remaining = EnumSet.noneOf(CastlingRight.class);
+    remaining.addAll(rights);
+    remaining.remove(right);
+    return new CastlingRights(remaining);
   }
 }

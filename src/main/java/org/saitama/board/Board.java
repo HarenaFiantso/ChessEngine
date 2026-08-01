@@ -35,6 +35,26 @@ public final class Board {
     return Optional.ofNullable(squares[square.index()]);
   }
 
+  /** Returns a board identical to this one except that {@code piece} stands on {@code square}. */
+  public Board withPiece(Square square, Piece piece) {
+    Objects.requireNonNull(square, "square");
+    Objects.requireNonNull(piece, "piece");
+    Piece[] updated = squares.clone();
+    updated[square.index()] = piece;
+    return new Board(updated);
+  }
+
+  /** Returns a board identical to this one except that {@code square} is vacant. */
+  public Board withoutPiece(Square square) {
+    Objects.requireNonNull(square, "square");
+    if (squares[square.index()] == null) {
+      return this;
+    }
+    Piece[] updated = squares.clone();
+    updated[square.index()] = null;
+    return new Board(updated);
+  }
+
   @Override
   public boolean equals(Object other) {
     return other instanceof Board board && Arrays.equals(squares, board.squares);

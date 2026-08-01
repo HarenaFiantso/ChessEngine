@@ -2,6 +2,7 @@ package org.saitama.board;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -51,5 +52,25 @@ class CastlingRightsTest {
     assertThrows(
         UnsupportedOperationException.class,
         () -> CastlingRights.all().rights().remove(CastlingRight.WHITE_KINGSIDE));
+  }
+
+  @Test
+  void withoutRemovesOnlyTheGivenRight() {
+    CastlingRights remaining = CastlingRights.all().without(CastlingRight.WHITE_KINGSIDE);
+    assertFalse(remaining.allows(CastlingRight.WHITE_KINGSIDE));
+    assertTrue(remaining.allows(CastlingRight.WHITE_QUEENSIDE));
+    assertTrue(remaining.allows(CastlingRight.BLACK_KINGSIDE));
+    assertTrue(remaining.allows(CastlingRight.BLACK_QUEENSIDE));
+  }
+
+  @Test
+  void withoutAnAbsentRightReturnsTheSameInstance() {
+    CastlingRights none = CastlingRights.none();
+    assertSame(none, none.without(CastlingRight.WHITE_KINGSIDE));
+  }
+
+  @Test
+  void withoutRejectsNull() {
+    assertThrows(NullPointerException.class, () -> CastlingRights.all().without(null));
   }
 }
