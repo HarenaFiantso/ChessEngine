@@ -2,6 +2,7 @@ package org.saitama.board;
 
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * One of the 64 squares of the board.
@@ -117,6 +118,25 @@ public enum Square {
   @SuppressWarnings("EnumOrdinal")
   public int index() {
     return ordinal();
+  }
+
+  /**
+   * Returns the square {@code fileDelta} files east and {@code rankDelta} ranks north of this one,
+   * or empty if that point lies off the board.
+   */
+  public Optional<Square> translated(int fileDelta, int rankDelta) {
+    int fileIndex = file().index() + fileDelta;
+    int rankIndex = rank().index() + rankDelta;
+    if (fileIndex < 0 || fileIndex >= FILE_COUNT || rankIndex < 0 || rankIndex >= RANK_COUNT) {
+      return Optional.empty();
+    }
+    return Optional.of(VALUES[rankIndex * FILE_COUNT + fileIndex]);
+  }
+
+  /** Returns the neighboring square one step toward {@code direction}, or empty at the edge. */
+  public Optional<Square> neighbor(Direction direction) {
+    Objects.requireNonNull(direction, "direction");
+    return translated(direction.fileDelta(), direction.rankDelta());
   }
 
   /** Returns the lowercase algebraic name of this square, such as {@code "e4"}. */
