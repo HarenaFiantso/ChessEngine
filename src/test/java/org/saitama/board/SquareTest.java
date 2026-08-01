@@ -72,4 +72,10 @@ class SquareTest {
     assertEquals(Optional.of(Square.D3), Square.E4.neighbor(Direction.SOUTH_WEST));
     assertEquals(Optional.empty(), Square.H4.neighbor(Direction.EAST));
   }
+
+  @ParameterizedTest
+  @CsvSource({"A1,false", "H1,true", "A8,true", "H8,false", "E4,true", "D4,false"})
+  void classifiesSquareShade(Square square, boolean light) {
+    assertEquals(light, square.isLight());
+  }
 }
