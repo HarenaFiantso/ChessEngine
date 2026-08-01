@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.saitama.board.Move;
+import org.saitama.board.PieceType;
 import org.saitama.board.Square;
 import org.saitama.fen.Fen;
 
@@ -65,5 +66,36 @@ class MoveGeneratorTest {
   })
   void generatesSliderMoves(String record, Square from, int expectedCount) {
     assertEquals(expectedCount, movesFrom(record, from).size());
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1, E2, 2",
+    "4k3/8/8/8/4p3/8/4P3/4K3 w - - 0 1, E2, 1",
+    "4k3/8/8/8/8/4p3/4P3/4K3 w - - 0 1, E2, 0",
+    "4k3/8/8/8/8/3p1p2/4P3/4K3 w - - 0 1, E2, 4",
+    "4k3/4p3/8/8/8/8/8/4K3 b - - 0 1, E7, 2",
+    "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1, E5, 2",
+    "k7/8/8/K2pP2r/8/8/8/8 w - d6 0 1, E5, 1",
+    "4k3/P7/8/8/8/8/8/4K3 w - - 0 1, A7, 4",
+    "4k2r/6P1/8/8/8/8/8/4K3 w - - 0 1, G7, 8"
+  })
+  void generatesPawnMoves(String record, Square from, int expectedCount) {
+    assertEquals(expectedCount, movesFrom(record, from).size());
+  }
+
+  @Test
+  void pawnPromotionsOfferAllFourPieces() {
+    List<Move> moves = movesFrom("4k3/P7/8/8/8/8/8/4K3 w - - 0 1", Square.A7);
+    for (PieceType promoted :
+        List.of(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT)) {
+      assertTrue(moves.contains(new Move.Promotion(Square.A7, Square.A8, promoted)));
+    }
+  }
+
+  @Test
+  void enPassantIsForbiddenWhenItExposesTheKing() {
+    List<Move> moves = movesFrom("k7/8/8/K2pP2r/8/8/8/8 w - d6 0 1", Square.E5);
+    assertEquals(List.of(new Move.Normal(Square.E5, Square.E6)), moves);
   }
 }
