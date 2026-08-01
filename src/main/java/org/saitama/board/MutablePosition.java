@@ -3,7 +3,6 @@ package org.saitama.board;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * The engine's mutable working state: one position that moves are made on and unmade from, with its
@@ -21,7 +20,7 @@ public final class MutablePosition implements PositionView {
   private static final Square[] SQUARES = Square.values();
 
   private final Piece[] squares = new Piece[SQUARES.length];
-  private final EnumSet<CastlingRight> castlingRights = EnumSet.noneOf(CastlingRight.class);
+  private int castlingBits;
   private Color sideToMove;
   private Square enPassantTarget;
   private int halfmoveClock;
@@ -47,7 +46,7 @@ public final class MutablePosition implements PositionView {
     }
     for (CastlingRight right : CastlingRight.values()) {
       if (view.castlingAllowed(right)) {
-        position.castlingRights.add(right);
+        position.castlingBits |= bitOf(right);
       }
     }
     position.sideToMove = view.sideToMove();
@@ -67,10 +66,16 @@ public final class MutablePosition implements PositionView {
         builder.put(square, piece);
       }
     }
+    EnumSet<CastlingRight> rights = EnumSet.noneOf(CastlingRight.class);
+    for (CastlingRight right : CastlingRight.values()) {
+      if (castlingAllowed(right)) {
+        rights.add(right);
+      }
+    }
     return new Position(
         builder.build(),
         sideToMove,
-        new CastlingRights(castlingRights),
+        new CastlingRights(rights),
         Optional.ofNullable(enPassantTarget),
         halfmoveClock,
         fullmoveNumber);
@@ -103,7 +108,7 @@ public final class MutablePosition implements PositionView {
 
   @Override
   public boolean castlingAllowed(CastlingRight right) {
-    return castlingRights.contains(right);
+    return (castlingBits & bitOf(right)) != 0;
   }
 
   @Override
@@ -122,7 +127,7 @@ public final class MutablePosition implements PositionView {
    * @param capturedPiece the piece removed by the move, or null for quiet moves
    * @param capturedSquare where the captured piece stood, or null
    * @param priorEnPassantTarget the en passant target before the move, or null
-   * @param priorCastlingRights the retained rights before the move
+   * @param priorCastlingBits the retained rights before the move, one bit per right
    * @param priorHalfmoveClock the clock before the move
    * @param priorZobristKey the key before the move
    */
@@ -130,21 +135,15 @@ public final class MutablePosition implements PositionView {
       Piece capturedPiece,
       Square capturedSquare,
       Square priorEnPassantTarget,
-      Set<CastlingRight> priorCastlingRights,
+      int priorCastlingBits,
       int priorHalfmoveClock,
-      long priorZobristKey) {
-
-    /** Canonicalizes the rights into an immutable copy. */
-    public Undo {
-      priorCastlingRights = Set.copyOf(priorCastlingRights);
-    }
-  }
+      long priorZobristKey) {}
 
   /**
    * Plays {@code move}, which must be pseudo-legal here, and returns what {@link #unmake} needs.
    */
   public Undo make(Move move) {
-    final Set<CastlingRight> priorRights = EnumSet.copyOf(castlingRights);
+    final int priorBits = castlingBits;
     final Square priorEnPassant = enPassantTarget;
     final int priorClock = halfmoveClock;
     final long priorKey = zobristKey;
@@ -200,7 +199,7 @@ public final class MutablePosition implements PositionView {
     }
     sideToMove = sideToMove.opposite();
     zobristKey ^= Zobrist.blackToMoveKey();
-    return new Undo(captured, capturedSquare, priorEnPassant, priorRights, priorClock, priorKey);
+    return new Undo(captured, capturedSquare, priorEnPassant, priorBits, priorClock, priorKey);
   }
 
   /** Reverses {@code move}, which must be the most recent {@link #make} with its {@code undo}. */
@@ -224,8 +223,7 @@ public final class MutablePosition implements PositionView {
     if (undo.capturedPiece() != null) {
       place(undo.capturedSquare(), undo.capturedPiece());
     }
-    castlingRights.clear();
-    castlingRights.addAll(undo.priorCastlingRights());
+    castlingBits = undo.priorCastlingBits();
     enPassantTarget = undo.priorEnPassantTarget();
     halfmoveClock = undo.priorHalfmoveClock();
     zobristKey = undo.priorZobristKey();
@@ -264,11 +262,37 @@ public final class MutablePosition implements PositionView {
   }
 
   private void decayRights(Square touched) {
-    for (CastlingRight right : Position.rightsAnchoredTo(touched)) {
-      if (castlingRights.remove(right)) {
+    int removed = castlingBits & anchoredBits(touched);
+    if (removed == 0) {
+      return;
+    }
+    for (CastlingRight right : CastlingRight.values()) {
+      if ((removed & bitOf(right)) != 0) {
         zobristKey ^= Zobrist.castlingKey(right);
       }
     }
+    castlingBits &= ~removed;
+  }
+
+  private static int bitOf(CastlingRight right) {
+    return switch (right) {
+      case WHITE_KINGSIDE -> 1;
+      case WHITE_QUEENSIDE -> 1 << 1;
+      case BLACK_KINGSIDE -> 1 << 2;
+      case BLACK_QUEENSIDE -> 1 << 3;
+    };
+  }
+
+  private static int anchoredBits(Square square) {
+    return switch (square) {
+      case E1 -> bitOf(CastlingRight.WHITE_KINGSIDE) | bitOf(CastlingRight.WHITE_QUEENSIDE);
+      case H1 -> bitOf(CastlingRight.WHITE_KINGSIDE);
+      case A1 -> bitOf(CastlingRight.WHITE_QUEENSIDE);
+      case E8 -> bitOf(CastlingRight.BLACK_KINGSIDE) | bitOf(CastlingRight.BLACK_QUEENSIDE);
+      case H8 -> bitOf(CastlingRight.BLACK_KINGSIDE);
+      case A8 -> bitOf(CastlingRight.BLACK_QUEENSIDE);
+      default -> 0;
+    };
   }
 
   private static Square doublePushTarget(Piece mover, Move.Normal move) {
