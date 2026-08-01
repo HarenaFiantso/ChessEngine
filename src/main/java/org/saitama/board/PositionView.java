@@ -20,4 +20,7 @@ public interface PositionView extends PiecePlacement {
 
   /** Returns halfmoves since the last capture or pawn advance. */
   int halfmoveClock();
+
+  /** Returns the one-based move counter, incremented after black moves. */
+  int fullmoveNumber();
 }
