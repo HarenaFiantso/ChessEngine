@@ -45,10 +45,10 @@ public final class Zobrist {
   private Zobrist() {}
 
   /** Returns the Zobrist key of {@code position}. */
-  public static long of(Position position) {
+  public static long of(PositionView position) {
     long key = 0;
     for (Square square : Square.values()) {
-      Optional<Piece> occupant = position.board().pieceOn(square);
+      Optional<Piece> occupant = position.pieceOn(square);
       if (occupant.isPresent()) {
         key ^= PIECE_SQUARE_KEYS.get(occupant.get())[square.index()];
       }
@@ -57,7 +57,7 @@ public final class Zobrist {
       key ^= BLACK_TO_MOVE_KEY;
     }
     for (CastlingRight right : CastlingRight.values()) {
-      if (position.castlingRights().allows(right)) {
+      if (position.castlingAllowed(right)) {
         key ^= CASTLING_KEYS.get(right);
       }
     }
@@ -66,5 +66,21 @@ public final class Zobrist {
       key ^= EN_PASSANT_FILE_KEYS[target.get().file().index()];
     }
     return key;
+  }
+
+  static long pieceKey(Piece piece, Square square) {
+    return PIECE_SQUARE_KEYS.get(piece)[square.index()];
+  }
+
+  static long castlingKey(CastlingRight right) {
+    return CASTLING_KEYS.get(right);
+  }
+
+  static long enPassantKey(File file) {
+    return EN_PASSANT_FILE_KEYS[file.index()];
+  }
+
+  static long blackToMoveKey() {
+    return BLACK_TO_MOVE_KEY;
   }
 }

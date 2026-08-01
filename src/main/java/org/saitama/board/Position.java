@@ -199,7 +199,7 @@ public record Position(
     return updated;
   }
 
-  private static List<CastlingRight> rightsAnchoredTo(Square square) {
+  static List<CastlingRight> rightsAnchoredTo(Square square) {
     return switch (square) {
       case E1 -> List.of(CastlingRight.WHITE_KINGSIDE, CastlingRight.WHITE_QUEENSIDE);
       case H1 -> List.of(CastlingRight.WHITE_KINGSIDE);
