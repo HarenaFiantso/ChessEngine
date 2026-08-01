@@ -63,4 +63,13 @@ class IterativeDeepeningSearchTest {
         IllegalArgumentException.class,
         () -> new SearchLimits(java.util.OptionalInt.empty(), java.util.Optional.empty()));
   }
+
+  @Test
+  void reportsMateDistancesInPlies() {
+    SearchResult mating =
+        deepening().search(Fen.parse("7k/8/8/8/8/8/1R6/R5K1 w - - 0 1"), SearchLimits.depth(3));
+    assertEquals(java.util.OptionalInt.of(3), mating.mateDistance());
+    SearchResult quiet = deepening().search(Fen.parse(Fen.STARTING), SearchLimits.depth(2));
+    assertEquals(java.util.OptionalInt.empty(), quiet.mateDistance());
+  }
 }
