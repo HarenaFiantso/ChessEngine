@@ -61,6 +61,10 @@ tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
     }
 }
 
+tasks.spotbugsTest {
+    excludeFilter = file("config/spotbugs/test-exclude.xml")
+}
+
 tasks.test {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Exemptions for test code only. assertThrows executables routinely discard
+     return values because the tested expression exists to throw. -->
+<FindBugsFilter xmlns="https://github.com/spotbugs/filter/3.0.0">
+  <Match>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_INFERRED"/>
+  </Match>
+</FindBugsFilter>
