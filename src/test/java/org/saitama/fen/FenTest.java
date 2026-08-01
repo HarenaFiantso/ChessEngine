@@ -9,7 +9,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.saitama.board.Board;
+import org.saitama.board.CastlingRights;
+import org.saitama.board.Color;
 import org.saitama.board.Piece;
+import org.saitama.board.Position;
 import org.saitama.board.Square;
 
 class FenTest {
@@ -87,5 +90,63 @@ class FenTest {
   void rejectsNull() {
     assertThrows(NullPointerException.class, () -> Fen.parsePlacement(null));
     assertThrows(NullPointerException.class, () -> Fen.writePlacement(null));
+    assertThrows(NullPointerException.class, () -> Fen.parse(null));
+    assertThrows(NullPointerException.class, () -> Fen.write(null));
+  }
+
+  @Test
+  void parsesTheCompleteStartingRecord() {
+    Position position = Fen.parse(Fen.STARTING);
+    assertEquals(Fen.parsePlacement(Fen.STARTING_PLACEMENT), position.board());
+    assertEquals(Color.WHITE, position.sideToMove());
+    assertEquals(CastlingRights.all(), position.castlingRights());
+    assertEquals(Optional.empty(), position.enPassantTarget());
+    assertEquals(0, position.halfmoveClock());
+    assertEquals(1, position.fullmoveNumber());
+  }
+
+  @Test
+  void parsesMidgameStateFields() {
+    Position position = Fen.parse("rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2");
+    assertEquals(Color.WHITE, position.sideToMove());
+    assertEquals(Optional.of(Square.C6), position.enPassantTarget());
+    assertEquals(0, position.halfmoveClock());
+    assertEquals(2, position.fullmoveNumber());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
+        "r3k2r/8/8/8/8/8/8/R3K2R b Kq - 10 25",
+        "4k3/8/8/8/8/8/8/4K3 w - - 99 120"
+      })
+  void completeRecordsRoundTripThroughParseAndWrite(String record) {
+    assertEquals(record, Fen.write(Fen.parse(record)));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 extra",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -  0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR W KQkq - 0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR x KQkq - 0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w QK - 0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KK - 0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkqq - 0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w  - 0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq e4 0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq E6 0 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - -1 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 01 1",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - x 1"
+      })
+  void rejectsMalformedOrInconsistentRecords(String record) {
+    assertThrows(IllegalArgumentException.class, () -> Fen.parse(record));
   }
 }
