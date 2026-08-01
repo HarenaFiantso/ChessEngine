@@ -12,5 +12,8 @@ final class Scores {
   /** Bound beyond any reachable score, used to seed alpha-beta windows. */
   static final int INFINITY = 2_000_000;
 
+  /** Scores beyond this magnitude are mate distances and need ply translation when cached. */
+  static final int MATE_THRESHOLD = MATE - 10_000;
+
   private Scores() {}
 }
