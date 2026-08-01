@@ -8,6 +8,7 @@ import org.saitama.board.Color;
 import org.saitama.board.Direction;
 import org.saitama.board.Piece;
 import org.saitama.board.PieceType;
+import org.saitama.board.Position;
 import org.saitama.board.Square;
 
 /**
@@ -38,6 +39,33 @@ public final class Attacks {
         || attackedByKing(board, square, attacker)
         || attackedAlongRays(board, square, attacker, Direction.ORTHOGONAL, PieceType.ROOK)
         || attackedAlongRays(board, square, attacker, Direction.DIAGONAL, PieceType.BISHOP);
+  }
+
+  /** Returns whether the side to move's king stands attacked in {@code position}. */
+  public static boolean isInCheck(Position position) {
+    Objects.requireNonNull(position, "position");
+    return isInCheck(position.board(), position.sideToMove());
+  }
+
+  /**
+   * Returns whether {@code side}'s king stands attacked on {@code board}.
+   *
+   * @throws IllegalStateException if {@code side} has no king on the board
+   */
+  public static boolean isInCheck(Board board, Color side) {
+    Objects.requireNonNull(board, "board");
+    Objects.requireNonNull(side, "side");
+    return isAttacked(board, kingSquare(board, side), side.opposite());
+  }
+
+  private static Square kingSquare(Board board, Color side) {
+    Piece king = Piece.of(side, PieceType.KING);
+    for (Square square : Square.values()) {
+      if (board.pieceOn(square).filter(king::equals).isPresent()) {
+        return square;
+      }
+    }
+    throw new IllegalStateException(side + " has no king on the board");
   }
 
   private static boolean attackedByPawn(Board board, Square square, Color attacker) {

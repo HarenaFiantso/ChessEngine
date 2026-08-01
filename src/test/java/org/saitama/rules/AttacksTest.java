@@ -1,6 +1,7 @@
 package org.saitama.rules;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -68,5 +69,35 @@ class AttacksTest {
         NullPointerException.class, () -> Attacks.isAttacked(null, Square.E4, Color.WHITE));
     assertThrows(NullPointerException.class, () -> Attacks.isAttacked(board, null, Color.WHITE));
     assertThrows(NullPointerException.class, () -> Attacks.isAttacked(board, Square.E4, null));
+  }
+
+  @Test
+  void theStartingPositionIsNotCheck() {
+    assertFalse(Attacks.isInCheck(Fen.parse(Fen.STARTING)));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "rnb2bnr/ppppkppp/8/4Q3/4P3/8/PPPP1PPP/RNB1KBNR b KQ - 0 3, true",
+    "4k3/4r3/8/8/8/8/4P3/4K3 w - - 0 1, false",
+    "4k3/4r3/8/8/8/8/8/4K3 w - - 0 1, true",
+    "4k3/8/8/8/8/3n4/8/4K3 w - - 0 1, true",
+    "4k3/8/8/8/8/8/3p4/4K3 w - - 0 1, true",
+    "4k3/8/8/8/8/8/8/4K3 w - - 0 1, false"
+  })
+  void reportsWhetherTheSideToMoveIsInCheck(String record, boolean expected) {
+    assertEquals(expected, Attacks.isInCheck(Fen.parse(record)));
+  }
+
+  @Test
+  void reportsCheckForEitherSideOnDemand() {
+    Board board = Fen.parsePlacement("4k3/8/8/8/B7/8/8/4K3");
+    assertTrue(Attacks.isInCheck(board, Color.BLACK));
+    assertFalse(Attacks.isInCheck(board, Color.WHITE));
+  }
+
+  @Test
+  void checkQueriesRequireTheKingOnTheBoard() {
+    assertThrows(IllegalStateException.class, () -> Attacks.isInCheck(Board.empty(), Color.WHITE));
   }
 }
