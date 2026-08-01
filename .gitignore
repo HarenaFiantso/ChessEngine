@@ -6,10 +6,9 @@ build/
 .kotlin
 
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+# The Gradle build is the single source of truth for project configuration;
+# every contributor's IDE derives its own settings from it.
+.idea/
 *.iws
 *.iml
 *.ipr
