@@ -20,6 +20,10 @@ application {
     mainClass = "org.saitama.Main"
 }
 
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
+}
+
 checkstyle {
     toolVersion = "13.9.0"
     maxWarnings = 0
