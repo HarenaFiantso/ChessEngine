@@ -29,9 +29,19 @@ rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
    fifty-move rule.
 6. Fullmove number, starting at 1 and incremented after black moves.
 
-The board model currently implements field one; the other five belong to game
-state and arrive with the position type, which will wrap a board together
-with them.
+All six fields are implemented. Field one parses into `Board`; the other five
+fill the remaining components of `Position`, the record wrapping a board
+together with the game state. Responsibilities are split deliberately: `Fen`
+translates text to and from domain values, while semantic validity, such as
+the rule that an en passant target can only lie on rank 6 with white to move
+or rank 3 with black to move, is enforced by `Position` itself. A position
+that violates its own invariants is unrepresentable no matter where it came
+from.
+
+Strictness extends beyond the placement grammar: side to move is exactly `w`
+or `b`, castling rights must appear in `KQkq` order (or be `-`), the en
+passant square is lowercase, and the move counters carry no leading zeros.
+Canonical form in, canonical form out.
 
 ## The placement grammar
 
