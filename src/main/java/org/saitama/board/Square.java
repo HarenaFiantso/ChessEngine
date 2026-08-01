@@ -139,6 +139,11 @@ public enum Square {
     return translated(direction.fileDelta(), direction.rankDelta());
   }
 
+  /** Returns whether this is a light square; a1 is dark, h1 is light. */
+  public boolean isLight() {
+    return (file().index() + rank().index()) % 2 != 0;
+  }
+
   /** Returns the lowercase algebraic name of this square, such as {@code "e4"}. */
   public String algebraic() {
     return name().toLowerCase(Locale.ROOT);
