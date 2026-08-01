@@ -1,6 +1,7 @@
 package org.saitama.search;
 
 import java.util.Optional;
+import java.util.OptionalInt;
 import org.saitama.board.Move;
 
 /**
@@ -15,4 +16,19 @@ import org.saitama.board.Move;
  * @param nodes how many positions the search visited
  * @param depth the deepest fully searched horizon backing {@code bestMove}
  */
-public record SearchResult(Optional<Move> bestMove, int score, long nodes, int depth) {}
+public record SearchResult(Optional<Move> bestMove, int score, long nodes, int depth) {
+
+  /**
+   * Returns the signed mate distance in plies when the score announces a forced mate: positive when
+   * the mover mates, negative when the mover gets mated, empty for ordinary scores.
+   */
+  public OptionalInt mateDistance() {
+    if (score > Scores.MATE_THRESHOLD) {
+      return OptionalInt.of(Scores.MATE - score);
+    }
+    if (score < -Scores.MATE_THRESHOLD) {
+      return OptionalInt.of(-(Scores.MATE + score));
+    }
+    return OptionalInt.empty();
+  }
+}
