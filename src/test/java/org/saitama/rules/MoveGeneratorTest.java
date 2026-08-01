@@ -54,4 +54,16 @@ class MoveGeneratorTest {
   void generatesKingMoves(String record, Square from, int expectedCount) {
     assertEquals(expectedCount, movesFrom(record, from).size());
   }
+
+  @ParameterizedTest
+  @CsvSource({
+    "4k3/8/8/8/4R3/8/8/4K3 w - - 0 1, E4, 13",
+    "4k3/8/8/8/4B3/8/8/4K3 w - - 0 1, E4, 13",
+    "4k3/8/8/8/4Q3/8/8/4K3 w - - 0 1, E4, 26",
+    "k7/8/8/8/1p2R1P1/8/8/4K3 w - - 0 1, E4, 10",
+    "4k3/8/8/1b6/8/3B4/4K3/8 w - - 0 1, D3, 2"
+  })
+  void generatesSliderMoves(String record, Square from, int expectedCount) {
+    assertEquals(expectedCount, movesFrom(record, from).size());
+  }
 }

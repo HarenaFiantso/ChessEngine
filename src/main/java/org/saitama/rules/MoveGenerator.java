@@ -41,7 +41,10 @@ public final class MoveGenerator {
     return switch (piece.type()) {
       case KNIGHT -> knightMoves(position, from);
       case KING -> kingMoves(position, from);
-      case PAWN, BISHOP, ROOK, QUEEN -> List.of();
+      case BISHOP -> sliderMoves(position, from, Direction.DIAGONAL);
+      case ROOK -> sliderMoves(position, from, Direction.ORTHOGONAL);
+      case QUEEN -> queenMoves(position, from);
+      case PAWN -> List.of();
     };
   }
 
@@ -64,6 +67,33 @@ public final class MoveGenerator {
         moves.add(new Move.Normal(from, destination.get()));
       }
     }
+    return moves;
+  }
+
+  private static List<Move> sliderMoves(
+      Position position, Square from, List<Direction> directions) {
+    List<Move> moves = new ArrayList<>();
+    for (Direction direction : directions) {
+      Optional<Square> step = from.neighbor(direction);
+      while (step.isPresent()) {
+        Square to = step.get();
+        Optional<Piece> occupant = position.board().pieceOn(to);
+        if (occupant.isPresent()) {
+          if (occupant.get().color() != position.sideToMove()) {
+            moves.add(new Move.Normal(from, to));
+          }
+          break;
+        }
+        moves.add(new Move.Normal(from, to));
+        step = to.neighbor(direction);
+      }
+    }
+    return moves;
+  }
+
+  private static List<Move> queenMoves(Position position, Square from) {
+    List<Move> moves = sliderMoves(position, from, Direction.ORTHOGONAL);
+    moves.addAll(sliderMoves(position, from, Direction.DIAGONAL));
     return moves;
   }
 
