@@ -4,6 +4,7 @@ plugins {
     jacoco
     id("com.diffplug.spotless") version "8.9.0"
     id("net.ltgt.errorprone") version "5.1.0"
+    id("com.github.spotbugs") version "6.5.9"
 }
 
 group = "org.saitama"
@@ -28,6 +29,10 @@ jacoco {
     toolVersion = "0.8.15"
 }
 
+spotbugs {
+    toolVersion = "4.10.3"
+}
+
 repositories {
     mavenCentral()
 }
@@ -48,6 +53,12 @@ spotless {
 
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Werror")
+}
+
+tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
+    reports.create("html") {
+        required = true
+    }
 }
 
 tasks.test {
