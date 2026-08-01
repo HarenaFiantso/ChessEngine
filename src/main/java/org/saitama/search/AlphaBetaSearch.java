@@ -3,6 +3,7 @@ package org.saitama.search;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import org.saitama.board.Move;
 import org.saitama.board.Position;
 import org.saitama.board.Zobrist;
@@ -29,6 +30,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
   private final Evaluator evaluator;
   private final TranspositionTable table;
   private long nodes;
+  private BooleanSupplier stopSignal = AlphaBetaSearch::neverStop;
 
   /** Creates a search judging leaves with {@code evaluator} and a default transposition table. */
   public AlphaBetaSearch(Evaluator evaluator) {
@@ -45,7 +47,17 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
 
   @Override
   public SearchResult search(Position position, int depth) {
+    return search(position, depth, AlphaBetaSearch::neverStop);
+  }
+
+  /**
+   * Searches like {@link #search(Position, int)} but polls {@code stop} at every node.
+   *
+   * @throws SearchAborted if {@code stop} fires; the caller must discard this iteration
+   */
+  SearchResult search(Position position, int depth, BooleanSupplier stop) {
     Objects.requireNonNull(position, "position");
+    this.stopSignal = Objects.requireNonNull(stop, "stop");
     if (depth < 1) {
       throw new IllegalArgumentException("Search depth starts at one: " + depth);
     }
@@ -68,6 +80,9 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
   private int alphaBeta(Position position, int depth, int alpha, int beta, int ply) {
     if (depth == 0) {
       return quiescence(position, alpha, beta, ply);
+    }
+    if (stopSignal.getAsBoolean()) {
+      throw new SearchAborted();
     }
     nodes++;
     List<Move> moves = MoveGenerator.legalMoves(position);
@@ -125,6 +140,10 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     return score;
   }
 
+  private static boolean neverStop() {
+    return false;
+  }
+
   private static int fromTableScore(int score, int ply) {
     if (score > Scores.MATE_THRESHOLD) {
       return score - ply;
@@ -136,6 +155,9 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
   }
 
   private int quiescence(Position position, int alpha, int beta, int ply) {
+    if (stopSignal.getAsBoolean()) {
+      throw new SearchAborted();
+    }
     nodes++;
     List<Move> moves = MoveGenerator.legalMoves(position);
     if (moves.isEmpty()) {
