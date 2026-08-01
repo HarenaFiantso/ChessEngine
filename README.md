@@ -6,9 +6,10 @@ testing, measured optimization, and a Git history that tells the story of every
 design decision.
 
 > [!NOTE]
-> The build, toolchain, and test pipeline are in place.
-> The engine itself does not exist yet... it will grow one reviewed, tested,
-> documented iteration at a time.
+> The engine plays. It speaks UCI, so any chess GUI can load it; see
+> Playing against it below. Rules are validated by perft, search uses
+> alpha-beta with quiescence, a transposition table, and iterative
+> deepening under time control.
 
 ## Goals
 
@@ -31,10 +32,26 @@ correctness, or maintainability.
 ## Building and running
 
 ```sh
-./gradlew build   # compile and run all checks
-./gradlew test    # run the test suite
-./gradlew run     # run the engine
+./gradlew build         # compile and run all checks
+./gradlew test          # run the test suite
+./gradlew run           # talk UCI to the engine interactively
+./gradlew installDist   # build a standalone launcher for GUIs
 ```
+
+## Playing against it
+
+The engine speaks the
+[Universal Chess Interface](https://www.chessprogramming.org/UCI), the
+protocol every chess GUI understands. Build the launcher and register it in
+your GUI of choice (Arena, Cute Chess, Lucas Chess, BanksiaGUI, and others):
+
+```sh
+./gradlew installDist
+# engine binary: build/install/ChessEngine/bin/ChessEngine
+```
+
+Point the GUI at that script as a UCI engine and play. The engine honors
+depth, fixed move time, and game-clock time controls.
 
 ## Roadmap
 
