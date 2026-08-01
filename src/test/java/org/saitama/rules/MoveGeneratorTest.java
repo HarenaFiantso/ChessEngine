@@ -1,6 +1,7 @@
 package org.saitama.rules;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -97,5 +98,35 @@ class MoveGeneratorTest {
   void enPassantIsForbiddenWhenItExposesTheKing() {
     List<Move> moves = movesFrom("k7/8/8/K2pP2r/8/8/8/8 w - d6 0 1", Square.E5);
     assertEquals(List.of(new Move.Normal(Square.E5, Square.E6)), moves);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1, E1, 7",
+    "r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1, E8, 7",
+    "r3k2r/8/8/8/8/8/8/R3KB1R w KQkq - 0 1, E1, 5",
+    "r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1, E1, 5"
+  })
+  void generatesCastlingWhenAllConditionsHold(String record, Square from, int expectedCount) {
+    assertEquals(expectedCount, movesFrom(record, from).size());
+  }
+
+  @Test
+  void castlingIsForbiddenThroughAttackedTransitSquares() {
+    List<Move> moves = movesFrom("r3k2r/8/8/8/8/5r2/8/R3K2R w KQkq - 0 1", Square.E1);
+    assertTrue(moves.contains(new Move.Castling(Square.E1, Square.C1)));
+    assertFalse(moves.contains(new Move.Castling(Square.E1, Square.G1)));
+  }
+
+  @Test
+  void queensideCastlingIgnoresAttacksOnTheKnightSquare() {
+    List<Move> moves = movesFrom("r3k2r/8/8/8/8/1r6/8/R3K2R w KQkq - 0 1", Square.E1);
+    assertTrue(moves.contains(new Move.Castling(Square.E1, Square.C1)));
+  }
+
+  @Test
+  void castlingIsForbiddenWhileInCheck() {
+    List<Move> moves = movesFrom("r3k2r/8/8/8/4r3/8/8/R3K2R w KQkq - 0 1", Square.E1);
+    assertFalse(moves.stream().anyMatch(move -> move instanceof Move.Castling));
   }
 }

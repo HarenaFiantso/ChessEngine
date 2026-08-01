@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import org.saitama.board.Board;
+import org.saitama.board.CastlingRight;
 import org.saitama.board.Color;
 import org.saitama.board.Direction;
+import org.saitama.board.File;
 import org.saitama.board.Move;
 import org.saitama.board.Piece;
 import org.saitama.board.PieceType;
@@ -71,7 +73,47 @@ public final class MoveGenerator {
         moves.add(new Move.Normal(from, destination.get()));
       }
     }
+    addCastlingMoves(position, from, moves);
     return moves;
+  }
+
+  private static void addCastlingMoves(Position position, Square from, List<Move> moves) {
+    Color mover = position.sideToMove();
+    Rank home = mover == Color.WHITE ? Rank.ONE : Rank.EIGHT;
+    if (from != Square.of(File.E, home)
+        || Attacks.isAttacked(position.board(), from, mover.opposite())) {
+      return;
+    }
+    CastlingRight kingside =
+        mover == Color.WHITE ? CastlingRight.WHITE_KINGSIDE : CastlingRight.BLACK_KINGSIDE;
+    CastlingRight queenside =
+        mover == Color.WHITE ? CastlingRight.WHITE_QUEENSIDE : CastlingRight.BLACK_QUEENSIDE;
+    if (mayCastle(position, home, kingside, File.H, List.of(File.F, File.G))) {
+      moves.add(new Move.Castling(from, Square.of(File.G, home)));
+    }
+    if (mayCastle(position, home, queenside, File.A, List.of(File.B, File.C, File.D))) {
+      moves.add(new Move.Castling(from, Square.of(File.C, home)));
+    }
+  }
+
+  private static boolean mayCastle(
+      Position position, Rank home, CastlingRight right, File rookFile, List<File> emptyFiles) {
+    if (!position.castlingRights().allows(right)) {
+      return false;
+    }
+    Board board = position.board();
+    Piece rook = Piece.of(position.sideToMove(), PieceType.ROOK);
+    if (board.pieceOn(Square.of(rookFile, home)).filter(rook::equals).isEmpty()) {
+      return false;
+    }
+    for (File file : emptyFiles) {
+      if (board.pieceOn(Square.of(file, home)).isPresent()) {
+        return false;
+      }
+    }
+    File transitFile = rookFile == File.H ? File.F : File.D;
+    return !Attacks.isAttacked(
+        board, Square.of(transitFile, home), position.sideToMove().opposite());
   }
 
   private static List<Move> sliderMoves(
