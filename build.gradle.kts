@@ -1,5 +1,6 @@
 plugins {
     application
+    checkstyle
     id("com.diffplug.spotless") version "8.9.0"
     id("net.ltgt.errorprone") version "5.1.0"
 }
@@ -15,6 +16,11 @@ java {
 
 application {
     mainClass = "org.saitama.Main"
+}
+
+checkstyle {
+    toolVersion = "13.9.0"
+    maxWarnings = 0
 }
 
 repositories {
