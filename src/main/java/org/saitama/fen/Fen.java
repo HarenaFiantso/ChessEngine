@@ -49,7 +49,7 @@ public final class Fen {
     Objects.requireNonNull(board, "board");
     StringBuilder text = new StringBuilder();
     for (int rankIndex = Rank.values().length - 1; rankIndex >= 0; rankIndex--) {
-      if (text.length() > 0) {
+      if (!text.isEmpty()) {
         text.append('/');
       }
       writeRank(text, board, Rank.of(rankIndex));
