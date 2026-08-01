@@ -15,6 +15,8 @@ public class Main {
     report("Opening choice at depth 4", engine.search(start, 4));
     Position mateInTwo = Fen.parse("7k/8/8/8/8/8/1R6/R5K1 w - - 0 1");
     report("Mate-in-two puzzle at depth 3", engine.search(mateInTwo, 3));
+    Position poisonedPawn = Fen.parse("4k3/8/4p3/3p4/8/8/8/3QK3 w - - 0 1");
+    report("Poisoned pawn declined at depth 1", engine.search(poisonedPawn, 1));
   }
 
   private static void report(String label, SearchResult result) {
