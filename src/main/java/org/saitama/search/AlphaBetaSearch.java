@@ -40,7 +40,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     nodes = 0;
     Optional<Move> bestMove = Optional.empty();
     int bestScore = -Scores.INFINITY;
-    for (Move move : MoveGenerator.legalMoves(position)) {
+    for (Move move : MoveOrdering.byPromise(position, MoveGenerator.legalMoves(position))) {
       int score = -alphaBeta(position.apply(move), depth - 1, -Scores.INFINITY, -bestScore, 1);
       if (score > bestScore) {
         bestScore = score;
@@ -66,7 +66,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
       return evaluator.evaluate(position);
     }
     int best = -Scores.INFINITY;
-    for (Move move : moves) {
+    for (Move move : MoveOrdering.byPromise(position, moves)) {
       best = Math.max(best, -alphaBeta(position.apply(move), depth - 1, -beta, -alpha, ply + 1));
       if (best >= beta) {
         return best;
