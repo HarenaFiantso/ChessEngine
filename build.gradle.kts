@@ -75,3 +75,26 @@ tasks.jacocoTestReport {
         xml.required = true
     }
 }
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
+    classDirectories.setFrom(
+        classDirectories.files.map {
+            fileTree(it) {
+                exclude("org/saitama/Main.class")
+            }
+        }
+    )
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                minimum = "0.90".toBigDecimal()
+            }
+        }
+    }
+}
+
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
+}
