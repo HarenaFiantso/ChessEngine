@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.saitama.board.Color;
 import org.saitama.board.Piece;
 import org.saitama.board.PieceType;
-import org.saitama.board.Position;
+import org.saitama.board.PositionView;
 import org.saitama.board.Square;
 
 /**
@@ -15,11 +15,11 @@ import org.saitama.board.Square;
 public final class MaterialEvaluator implements Evaluator {
 
   @Override
-  public int evaluate(Position position) {
+  public int evaluate(PositionView position) {
     Objects.requireNonNull(position, "position");
     int whiteMinusBlack = 0;
     for (Square square : Square.values()) {
-      Optional<Piece> occupant = position.board().pieceOn(square);
+      Optional<Piece> occupant = position.pieceOn(square);
       if (occupant.isPresent()) {
         Piece piece = occupant.get();
         int value = value(piece.type());

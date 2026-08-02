@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.saitama.board.MutablePosition;
+import org.saitama.board.Position;
 import org.saitama.fen.Fen;
 
 class ClassicalEvaluatorTest {
@@ -49,5 +51,13 @@ class ClassicalEvaluatorTest {
     int whiteView = evaluator.evaluate(Fen.parse(placement + " w - - 0 1"));
     int blackView = evaluator.evaluate(Fen.parse(placement + " b - - 0 1"));
     assertEquals(whiteView, -blackView);
+  }
+
+  @Test
+  void scoresMutableCopiesLikeTheirSource() {
+    Position position =
+        Fen.parse("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+    assertEquals(
+        evaluator.evaluate(position), evaluator.evaluate(MutablePosition.copyOf(position)));
   }
 }
