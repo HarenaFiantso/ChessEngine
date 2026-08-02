@@ -31,14 +31,18 @@ import org.saitama.rules.MoveGenerator;
  * search abandons the scratch copy mid-line, which is safe because the next search starts from a
  * fresh copy. Instances are not thread-safe; each search runs on one thread.
  *
- * <p>On top of the exact pruning sits one speculative cut, null move pruning: give the opponent a
- * free extra move, search the result shallower and with a null window, and if the mover still
- * stands at or above beta, trust that the real position would too and prune. The bet rests on the
- * observation that in almost every chess position moving improves matters; it is off in check,
- * without a minor or major piece for the mover, where zugzwang lurks, and near mate scores. Unlike
- * alpha-beta itself the cut is not exact, so the equivalence proof against the reference search
- * pins a configuration with it disabled, and separate tests hold the speculative configuration to
- * what it actually promises: far fewer nodes and the same mates and best moves where it matters.
+ * <p>On top of the exact pruning sit two speculative cuts. Null move pruning gives the opponent a
+ * free extra move and searches the result shallower with a null window; if the mover still stands
+ * at or above beta after donating the tempo, the real position is trusted to clear beta too and the
+ * node is pruned. The bet rests on the observation that in almost every chess position moving
+ * improves matters; it is off in check, without a minor or major piece for the mover, where
+ * zugzwang lurks, and near mate scores. Late move reductions lean on ordering quality instead: once
+ * the remembered best move, the captures, and the killers have been searched, the quiet stragglers
+ * almost never raise alpha, so they are first searched one ply shallower with a null window, and
+ * only a surprise there earns the full-depth, full-window search. Neither cut is exact, so the
+ * equivalence proof against the reference search pins a configuration with both disabled, and
+ * separate tests hold the speculative configuration to what it actually promises: far fewer nodes
+ * and the same mates and best moves where it matters.
  */
 public final class AlphaBetaSearch implements SearchAlgorithm {
 
@@ -50,9 +54,13 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
 
   private static final int NULL_MOVE_REDUCTION = 2;
 
+  private static final int LATE_MOVE_MIN_DEPTH = 3;
+
+  private static final int EARLY_MOVE_COUNT = 3;
+
   private final Evaluator evaluator;
   private final TranspositionTable table;
-  private final boolean nullMovePruning;
+  private final boolean speculativePruning;
   private final MoveOrdering ordering = new MoveOrdering();
   private long nodes;
   private BooleanSupplier stopSignal = AlphaBetaSearch::neverStop;
@@ -70,13 +78,14 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
   }
 
   /**
-   * Creates a search with null move pruning switchable, which only tests need: the equivalence
-   * proof against the exhaustive reference requires the exact pruning alone.
+   * Creates a search with the speculative cuts, null move pruning and late move reductions,
+   * switchable together, which only tests need: the equivalence proof against the exhaustive
+   * reference requires the exact pruning alone.
    */
-  AlphaBetaSearch(Evaluator evaluator, TranspositionTable table, boolean nullMovePruning) {
+  AlphaBetaSearch(Evaluator evaluator, TranspositionTable table, boolean speculativePruning) {
     this.evaluator = Objects.requireNonNull(evaluator, "evaluator");
     this.table = Objects.requireNonNull(table, "table");
-    this.nullMovePruning = nullMovePruning;
+    this.speculativePruning = speculativePruning;
   }
 
   @Override
@@ -160,11 +169,12 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
         return cachedScore;
       }
     }
-    if (nullMovePruning
+    boolean inCheck = Attacks.isInCheck(position);
+    if (speculativePruning
         && allowNull
         && depth >= NULL_MOVE_MIN_DEPTH
         && beta < Scores.MATE_THRESHOLD
-        && !Attacks.isInCheck(position)
+        && !inCheck
         && hasNonPawnMaterial(position)) {
       MutablePosition.Undo undo = position.makeNull();
       int refutation =
@@ -182,13 +192,29 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     Optional<Move> rememberedBest = remembered.flatMap(TranspositionTable.Entry::bestMove);
     List<Move> candidates = MoveGenerator.pseudoLegalMoves(position);
     for (Move move : ordering.byPromise(position, candidates, rememberedBest, ply)) {
+      boolean quiet = !MoveOrdering.isCapture(position, move) && !(move instanceof Move.Promotion);
       MutablePosition.Undo undo = position.make(move);
       if (Attacks.isInCheck(position, mover)) {
         position.unmake(move, undo);
         continue;
       }
       legalMoves++;
-      int score = -alphaBeta(position, depth - 1, -beta, -alpha, ply + 1, true);
+      boolean reducible =
+          speculativePruning
+              && quiet
+              && !inCheck
+              && depth >= LATE_MOVE_MIN_DEPTH
+              && legalMoves > EARLY_MOVE_COUNT
+              && !Attacks.isInCheck(position);
+      int score;
+      if (reducible) {
+        score = -alphaBeta(position, depth - 2, -alpha - 1, -alpha, ply + 1, true);
+        if (score > alpha) {
+          score = -alphaBeta(position, depth - 1, -beta, -alpha, ply + 1, true);
+        }
+      } else {
+        score = -alphaBeta(position, depth - 1, -beta, -alpha, ply + 1, true);
+      }
       position.unmake(move, undo);
       if (score > best) {
         best = score;
@@ -201,7 +227,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
       alpha = Math.max(alpha, best);
     }
     if (legalMoves == 0) {
-      return Attacks.isInCheck(position) ? -(Scores.MATE - ply) : 0;
+      return inCheck ? -(Scores.MATE - ply) : 0;
     }
     TranspositionTable.NodeType type =
         best >= beta
