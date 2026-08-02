@@ -16,7 +16,7 @@ import org.saitama.fen.Fen;
 class AlphaBetaSearchTest {
 
   private final SearchAlgorithm pruningOnly =
-      new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled());
+      new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled(), false);
   private final SearchAlgorithm withTable = new AlphaBetaSearch(new ClassicalEvaluator());
   private final SearchAlgorithm exhaustive = new NegamaxSearch(new ClassicalEvaluator());
 
@@ -54,6 +54,25 @@ class AlphaBetaSearchTest {
   })
   void findsForcedMatesWithExactScoresDespiteCaching(String record, int depth, int expected) {
     assertEquals(expected, withTable.search(Fen.parse(record), depth).score());
+  }
+
+  @Test
+  void nullMovePruningCutsNodesAtEqualDepthWithoutChangingTheAnswer() {
+    String kiwipete = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+    SearchResult speculative =
+        new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled(), true)
+            .search(Fen.parse(kiwipete), 5);
+    SearchResult exact =
+        new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled(), false)
+            .search(Fen.parse(kiwipete), 5);
+    assertTrue(speculative.nodes() * 3 < exact.nodes() * 2);
+    assertEquals(exact.bestMove(), speculative.bestMove());
+  }
+
+  @Test
+  void findsDeepForcedMatesWithAllPruningOn() {
+    SearchResult result = withTable.search(Fen.parse("7k/8/8/8/8/8/1R6/R5K1 w - - 0 1"), 5);
+    assertEquals(Scores.MATE - 3, result.score());
   }
 
   @Test
