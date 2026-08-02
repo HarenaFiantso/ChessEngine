@@ -21,6 +21,7 @@ benchmarks or do not get merged.
 | MoveGenerator.legalMoves (Kiwipete) | 14.8 us |
 | Perft(3) from the start | 2.7 ms |
 | Alpha-beta depth 4, fresh table | 15 ms |
+| Iterative deepening to depth 6 | 256 ms |
 
 Move generation dominates everything built on it. Its cost is the legality
 filter: every pseudo-legal candidate is made, answered by isInCheck (a
@@ -81,6 +82,18 @@ depth-four benchmark still improved from 19.6ms to 14.7ms because the
 transposition table turns even shallow null searches into useful cached
 bounds. A two-second think at the start position now reaches depth six on
 half the nodes it needed before.
+
+## Aspiration windows
+
+Measured on the full playing configuration at depth six before shipping:
+the start position spent 103842 nodes against 119165 without aspiration,
+thirteen percent fewer; Kiwipete 696002 against 741740 and the fine rook
+endgame 6529 against 6926, six percent fewer each; identical scores and
+best moves throughout. A deliberately narrow window costs a full
+re-search when the score swings, so the win is bounded and the loss is
+rare; the deepening loop itself joined the benchmark suite as
+deepeningDepthSix, baseline 256ms, so future search work is measured on
+the loop real play uses rather than a single fixed depth.
 
 ## The roadmap this motivates
 

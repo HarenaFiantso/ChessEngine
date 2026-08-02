@@ -84,6 +84,31 @@ it mid-flight without costing the guaranteed depth-one move. Allocating a
 budget from a full game clock is policy that arrives with the UCI layer
 itself.
 
+## Aspiration windows
+
+Deepening funds a second bet. Each iteration knows the previous score, and
+scores rarely swing wildly between consecutive depths, so instead of an
+unbounded window the next iteration aspires to a narrow one, half a pawn
+to either side of the last answer. Alpha-beta prunes in proportion to how
+much is already ruled out, and a narrow window rules out almost
+everything, so the whole tree cuts harder. The price appears when the bet
+loses: a fail-soft score landing on or outside an edge is only a bound,
+not an answer, and the iteration must re-search with the full window. Mate
+scores are never aspired around, because they measure distance rather
+than evaluation, and a centipawn margin around a mate distance is
+meaningless.
+
+The root gained an explicit window for this, with the fail-soft contract
+tests pin directly: a score strictly inside the window equals the
+full-window answer, a score at an edge or beyond is a bound in that
+direction. The repair discipline is proven the same way the rest of the
+search is: an aspiring deepening over the exact configuration still
+produces exact scores, including across the depth where a winning
+position's evaluation jumps to a mate distance and the window must miss.
+Measured at depth six with all pruning on: six to thirteen percent fewer
+nodes with identical scores and moves across opening, middlegame, and
+endgame positions.
+
 ## Walking the tree with make and unmake
 
 The pruning search walks the whole tree on one mutable scratch copy of the
@@ -135,9 +160,9 @@ honestly by asserting at the depth where the technique starts paying.
 
 ## What is deliberately absent
 
-Aspiration windows and late move reductions. Each arrives as its own
-measured step; the node counter in SearchResult is the instrument those
-measurements use.
+Late move reductions, killer moves, and history heuristics. Each arrives
+as its own measured step; the node counter in SearchResult is the
+instrument those measurements use.
 
 ## References
 
