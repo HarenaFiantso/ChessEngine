@@ -7,6 +7,7 @@ import org.saitama.board.Move;
 import org.saitama.board.Piece;
 import org.saitama.board.PieceType;
 import org.saitama.board.PositionView;
+import org.saitama.rules.StaticExchange;
 
 /**
  * Orders moves so alpha-beta meets its best candidates first: the remembered best move, captures by
@@ -30,6 +31,7 @@ final class MoveOrdering {
   private static final int FIRST_KILLER_BONUS = 800_000;
   private static final int SECOND_KILLER_BONUS = 790_000;
   private static final int HISTORY_CEILING = 700_000;
+  private static final int LOSING_CAPTURE_BASE = 100_000;
   private static final int VICTIM_WEIGHT = 8;
   private static final int MAX_PLY = 128;
   private static final int SQUARE_COUNT = 64;
@@ -66,6 +68,9 @@ final class MoveOrdering {
   private int promise(PositionView position, Move move, int ply) {
     Optional<Piece> victim = victimOf(position, move);
     if (victim.isPresent()) {
+      if (StaticExchange.evaluate(position, move) < 0) {
+        return LOSING_CAPTURE_BASE;
+      }
       PieceType attacker = position.pieceOn(move.from()).orElseThrow().type();
       return CAPTURE_BASE + rank(victim.get().type()) * VICTIM_WEIGHT - rank(attacker);
     }
