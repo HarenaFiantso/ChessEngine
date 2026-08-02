@@ -100,6 +100,57 @@ class AlphaBetaSearchTest {
   }
 
   @Test
+  void rootWindowsThatHitReturnTheFullWindowAnswer() {
+    String record = "4k3/8/8/3q4/8/8/8/3RK3 w - - 0 1";
+    AlphaBetaSearch full =
+        new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled(), false);
+    AlphaBetaSearch windowed =
+        new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled(), false);
+    SearchResult trusted = full.search(Fen.parse(record), 3, AlphaBetaSearchTest::neverStop);
+    SearchResult aspired =
+        windowed.search(
+            Fen.parse(record),
+            3,
+            AlphaBetaSearchTest::neverStop,
+            trusted.score() - 50,
+            trusted.score() + 50);
+    assertEquals(trusted.score(), aspired.score());
+    assertEquals(trusted.bestMove(), aspired.bestMove());
+  }
+
+  @Test
+  void rootWindowsBelowTheTruthFailHigh() {
+    AlphaBetaSearch search =
+        new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled(), false);
+    SearchResult result =
+        search.search(
+            Fen.parse("6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1"),
+            2,
+            AlphaBetaSearchTest::neverStop,
+            -100,
+            100);
+    assertTrue(result.score() >= 100);
+  }
+
+  @Test
+  void rootWindowsAboveTheTruthFailLow() {
+    AlphaBetaSearch search =
+        new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled(), false);
+    SearchResult result =
+        search.search(
+            Fen.parse("3rk3/8/8/8/8/8/8/4K3 w - - 0 1"),
+            2,
+            AlphaBetaSearchTest::neverStop,
+            500,
+            600);
+    assertTrue(result.score() <= 500);
+  }
+
+  private static boolean neverStop() {
+    return false;
+  }
+
+  @Test
   void firingStopSignalsUnwindTheSearch() {
     AlphaBetaSearch search = new AlphaBetaSearch(new ClassicalEvaluator());
     assertThrows(SearchAborted.class, () -> search.search(Fen.parse(Fen.STARTING), 4, () -> true));
