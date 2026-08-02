@@ -202,11 +202,40 @@ complement is visible: the tactical Kiwipete middlegame, where quiet
 stragglers abound, gave up 47 percent of its nodes, the endgame 28, the
 already-tiny quiet opening 14, with identical scores and moves throughout.
 
+## Static exchange evaluation
+
+MVV-LVA ranks a capture by its victim, but a capture that wins a pawn and
+loses the queen behind it is not worth a pawn, and knowing that without
+searching is what static exchange evaluation provides. The exchange is
+played out on a scratch board: each side in turn throws its least valuable
+remaining attacker at the square, either side may stand pat rather than
+recapture at a loss, and attackers are rediscovered from the board after
+every trade so a rook behind a rook joins the moment its blocker leaves
+the ray. A king joins only when the opponent has no reply, because
+recapturing into an attacked square is not a move.
+
+The verdict serves twice. In ordering, captures the exchange calls losing
+drop below the killers, ahead only of uncredited quiet moves, so the
+search stops opening lines with material-shedding captures. In quiescence,
+losing captures are skipped outright, a third speculative cut behind the
+same toggle as the others: resolving a capture chain that sheds material
+rarely improves on standing pat, and the equivalence proof keeps its
+meaning because the exact configuration still resolves every capture the
+reference search does.
+
+Shipping it taught a measurement lesson worth recording: the first wiring
+cut nodes by a third to a half and still ran slower, because the sort's
+comparator recomputed each move's promise, exchange evaluation included,
+on every comparison. Scoring each move once and sorting the scored pairs
+restored the win. Nodes are deterministic; wall clock is where the truth
+lives.
+
 ## What is deliberately absent
 
-Static exchange evaluation for capture ordering, and depth-adaptive
-reduction amounts. Each arrives as its own measured step; the node counter
-in SearchResult is the instrument those measurements use.
+Depth-adaptive reduction amounts, check extensions, and evaluation terms
+beyond material and piece placement. Each arrives as its own measured
+step; the node counter in SearchResult is the instrument those
+measurements use.
 
 ## References
 

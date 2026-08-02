@@ -43,6 +43,7 @@ final class MoveOrdering {
   List<Move> byPromise(
       PositionView position, List<Move> moves, Optional<Move> rememberedBest, int ply) {
     record Scored(Move move, int promise) {}
+
     return moves.stream()
         .map(
             move ->

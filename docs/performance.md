@@ -19,9 +19,9 @@ benchmarks or do not get merged.
 | ClassicalEvaluator.evaluate | 0.18 us |
 | Zobrist.of | 0.16 us |
 | MoveGenerator.legalMoves (Kiwipete) | 15 us |
-| Perft(3) from the start | 2.7 ms |
-| Alpha-beta depth 4, fresh table | 2.1 ms |
-| Iterative deepening to depth 6 | 47 ms |
+| Perft(3) from the start | 2.9 ms |
+| Alpha-beta depth 4, fresh table | 1.9 ms |
+| Iterative deepening to depth 6 | 31 ms |
 
 Move generation dominates everything built on it. Its cost is the legality
 filter: every pseudo-legal candidate is made, answered by isInCheck (a
@@ -121,6 +121,18 @@ deepeningDepthSix from 52ms to 47ms, the smaller gain reflecting that the
 opening deepening was already dominated by ordering. The reduced search
 that surprises is re-searched at full depth, so the technique's cost is
 bounded and its errors rare rather than silent.
+
+## Static exchange evaluation
+
+Judging captures by their full exchange rather than their first victim cut
+depth-six trees again: Kiwipete 327840 to 183551 nodes, the opening 18191
+to 11948, the endgame 4401 to 3521, same best moves. The iteration's real
+lesson was in the shipping: the first wiring ran slower despite the node
+cut, because the sort comparator recomputed every move's promise, exchange
+evaluation included, on every comparison. Scoring each move once before
+sorting restored the win: deepeningDepthSix fell from 47ms to 31ms and
+searchDepthFour to 1.9ms. Nodes are deterministic, but wall clock is where
+the truth lives, and both get measured before anything ships.
 
 ## The roadmap this motivates
 
