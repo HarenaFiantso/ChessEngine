@@ -35,8 +35,13 @@ container the UCI layer uses, so the interface cannot corrupt a position
 any more than a hostile UCI script can.
 
 The window itself, SaitamaGui plus BoardView, only paints session state
-and forwards clicks. The board is drawn with the Unicode chess glyphs, so
-there are no image assets to license or load.
+and forwards clicks. The pieces are the Cburnett set by Colin M.L.
+Burnett, the standard chess artwork familiar from Wikipedia and Lichess,
+shipped as PNG resources rendered from the Wikimedia Commons originals
+and used under the CC BY-SA 3.0 license. The first cut used Unicode
+glyphs; images replaced them because a text glyph inherits font metrics
+and weight from the platform, while a drawn set stays identical
+everywhere and reads clearly at large sizes.
 
 ## Thinking without freezing
 
