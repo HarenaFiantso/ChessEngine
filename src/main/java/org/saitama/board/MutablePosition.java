@@ -202,6 +202,37 @@ public final class MutablePosition implements PositionView {
     return new Undo(captured, capturedSquare, priorEnPassant, priorBits, priorClock, priorKey);
   }
 
+  /**
+   * Passes the turn without moving a piece, the search device behind null move pruning.
+   *
+   * <p>Only the turn flips and the en passant target clears; the halfmove clock is left alone
+   * because the null position is a hypothesis, not a played move, and aging it toward the
+   * fifty-move rule could let a fake draw hide a real advantage. No legal game contains a passed
+   * turn, so callers must unmake before trusting the position again.
+   */
+  public Undo makeNull() {
+    final Undo undo =
+        new Undo(null, null, enPassantTarget, castlingBits, halfmoveClock, zobristKey);
+    setEnPassantTarget(null);
+    if (sideToMove == Color.BLACK) {
+      fullmoveNumber++;
+    }
+    sideToMove = sideToMove.opposite();
+    zobristKey ^= Zobrist.blackToMoveKey();
+    return undo;
+  }
+
+  /** Reverses the most recent {@link #makeNull} given its {@code undo}. */
+  public void unmakeNull(Undo undo) {
+    sideToMove = sideToMove.opposite();
+    if (sideToMove == Color.BLACK) {
+      fullmoveNumber--;
+    }
+    enPassantTarget = undo.priorEnPassantTarget();
+    halfmoveClock = undo.priorHalfmoveClock();
+    zobristKey = undo.priorZobristKey();
+  }
+
   /** Reverses {@code move}, which must be the most recent {@link #make} with its {@code undo}. */
   public void unmake(Move move, Undo undo) {
     sideToMove = sideToMove.opposite();

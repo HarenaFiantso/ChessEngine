@@ -35,6 +35,25 @@ class MutablePositionTest {
     }
   }
 
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
+        "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 2"
+      })
+  void nullMovesFlipTheTurnAndUnmakeRestoresEverything(String record) {
+    Position position = Fen.parse(record);
+    MutablePosition mutable = MutablePosition.copyOf(position);
+    final MutablePosition.Undo undo = mutable.makeNull();
+    assertEquals(position.sideToMove().opposite(), mutable.sideToMove());
+    assertEquals(java.util.Optional.empty(), mutable.enPassantTarget());
+    assertEquals(Zobrist.of(mutable.snapshot()), mutable.zobristKey());
+    mutable.unmakeNull(undo);
+    assertEquals(position, mutable.snapshot());
+    assertEquals(Zobrist.of(position), mutable.zobristKey());
+  }
+
   @Test
   void copyAndSnapshotRoundTrip() {
     Position kiwipete =
