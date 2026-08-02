@@ -18,9 +18,9 @@ benchmarks or do not get merged.
 | Position.apply (one move) | 0.034 us |
 | ClassicalEvaluator.evaluate | 0.18 us |
 | Zobrist.of | 0.16 us |
-| MoveGenerator.legalMoves (Kiwipete) | 15.6 us |
-| Perft(3) from the start | 2.9 ms |
-| Alpha-beta depth 4, fresh table | 20 ms |
+| MoveGenerator.legalMoves (Kiwipete) | 14.8 us |
+| Perft(3) from the start | 2.7 ms |
+| Alpha-beta depth 4, fresh table | 15 ms |
 
 Move generation dominates everything built on it. Its cost is the legality
 filter: every pseudo-legal candidate is made, answered by isInCheck (a
@@ -68,6 +68,19 @@ other benchmark at par; the same half-second budget that reached depth four
 before now completes depth five. The exhaustive reference search
 deliberately stays on the immutable path, so the equivalence tests prove
 the fast path against an oracle that cannot share its bugs.
+
+## Null move pruning
+
+The first speculative cut came with its own honest depth profile,
+measured before the assertion was written: at depth three it never fires,
+because the recursion never sees a node deep enough; at depth four it is
+a wash, 55065 nodes to 55112, the failed null searches costing what the
+rare cutoffs save; at depth five it removes 42 percent of the tree,
+391843 nodes to 227991, with the same score and the same move. The
+depth-four benchmark still improved from 19.6ms to 14.7ms because the
+transposition table turns even shallow null searches into useful cached
+bounds. A two-second think at the start position now reaches depth six on
+half the nodes it needed before.
 
 ## The roadmap this motivates
 
