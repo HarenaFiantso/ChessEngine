@@ -6,10 +6,11 @@ testing, measured optimization, and a Git history that tells the story of every
 design decision.
 
 > [!NOTE]
-> The engine plays. It speaks UCI, so any chess GUI can load it; see
-> Playing against it below. Rules are validated by perft, search uses
-> alpha-beta with quiescence, a transposition table, and iterative
-> deepening under time control.
+> The engine plays. It speaks UCI, so any chess GUI can load it, and it
+> ships its own JavaFX board; see Playing against it below. Rules are
+> validated by perft, search uses alpha-beta with quiescence, a
+> transposition table, null move pruning, and iterative deepening with
+> aspiration windows under time control.
 
 ## Goals
 
@@ -33,14 +34,23 @@ correctness, or maintainability.
 
 ```sh
 ./gradlew build         # compile and run all checks
-./gradlew test          # run the test suite
-./gradlew run           # talk UCI to the engine interactively
-./gradlew installDist   # build a standalone launcher for GUIs
+./gradlew :engine:run   # talk UCI to the engine interactively
+./gradlew :gui:run      # play against the engine on the built-in board
+./gradlew installDist   # build a standalone launcher for third-party GUIs
 ```
 
 ## Playing against it
 
-The engine speaks the
+The quickest way is the built-in JavaFX board:
+
+```sh
+./gradlew :gui:run
+```
+
+You play white by clicking; Saitama answers as black. The window offers
+legal-move highlighting, promotion choice, and a new-game button.
+
+The engine also speaks the
 [Universal Chess Interface](https://www.chessprogramming.org/UCI), the
 protocol every chess GUI understands. Build the launcher and register it in
 your GUI of choice (Arena, Cute Chess, Lucas Chess, BanksiaGUI, and others):
