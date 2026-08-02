@@ -19,9 +19,9 @@ benchmarks or do not get merged.
 | ClassicalEvaluator.evaluate | 0.18 us |
 | Zobrist.of | 0.16 us |
 | MoveGenerator.legalMoves (Kiwipete) | 15 us |
-| Perft(3) from the start | 2.9 ms |
-| Alpha-beta depth 4, fresh table | 4.5 ms |
-| Iterative deepening to depth 6 | 52 ms |
+| Perft(3) from the start | 2.7 ms |
+| Alpha-beta depth 4, fresh table | 2.1 ms |
+| Iterative deepening to depth 6 | 47 ms |
 
 Move generation dominates everything built on it. Its cost is the legality
 filter: every pseudo-legal candidate is made, answered by isInCheck (a
@@ -109,6 +109,18 @@ identical scores and best moves throughout. The lesson mirrors the
 iteration-ten one that introduced ordering in the first place: alpha-beta
 is only as good as the first move it tries, and the cheapest nodes are the
 ones never visited.
+
+## Late move reductions
+
+The complement to the ordering iteration, measured at depth six on the
+full configuration: Kiwipete fell from 620014 nodes to 327840, 47 percent
+fewer, exactly where quiet stragglers abound; the fine endgame gave up 28
+percent and the already-tiny quiet opening 14; identical scores and moves
+throughout. searchDepthFour dropped from 4.5ms to 2.1ms and
+deepeningDepthSix from 52ms to 47ms, the smaller gain reflecting that the
+opening deepening was already dominated by ordering. The reduced search
+that surprises is re-searched at full depth, so the technique's cost is
+bounded and its errors rare rather than silent.
 
 ## The roadmap this motivates
 
