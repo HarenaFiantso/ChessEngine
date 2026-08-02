@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.saitama.board.Move;
 import org.saitama.board.Piece;
 import org.saitama.board.PieceType;
-import org.saitama.board.Position;
+import org.saitama.board.PositionView;
 
 /**
  * Orders moves so alpha-beta meets its best candidates first: captures by most valuable victim and
@@ -14,7 +14,9 @@ import org.saitama.board.Position;
  *
  * <p>Pruning efficiency depends entirely on encountering a strong move early; every later move is
  * then refuted cheaply. The ranks used here are relative worth only, deliberately independent of
- * the evaluator's centipawn policy.
+ * the evaluator's centipawn policy. Sorting is stable, so moves of equal promise keep their
+ * generation order and callers may filter the input list before or after ordering with the same
+ * result.
  */
 final class MoveOrdering {
 
@@ -25,11 +27,12 @@ final class MoveOrdering {
 
   private MoveOrdering() {}
 
-  static List<Move> byPromise(Position position, List<Move> moves) {
+  static List<Move> byPromise(PositionView position, List<Move> moves) {
     return byPromise(position, moves, Optional.empty());
   }
 
-  static List<Move> byPromise(Position position, List<Move> moves, Optional<Move> rememberedBest) {
+  static List<Move> byPromise(
+      PositionView position, List<Move> moves, Optional<Move> rememberedBest) {
     return moves.stream()
         .sorted(
             Comparator.comparingInt(
@@ -41,11 +44,11 @@ final class MoveOrdering {
         .toList();
   }
 
-  private static int promise(Position position, Move move) {
+  private static int promise(PositionView position, Move move) {
     int score = 0;
     Optional<Piece> victim = victimOf(position, move);
     if (victim.isPresent()) {
-      PieceType attacker = position.board().pieceOn(move.from()).orElseThrow().type();
+      PieceType attacker = position.pieceOn(move.from()).orElseThrow().type();
       score += CAPTURE_BASE + rank(victim.get().type()) * VICTIM_WEIGHT - rank(attacker);
     }
     if (move instanceof Move.Promotion promotion) {
@@ -54,11 +57,11 @@ final class MoveOrdering {
     return score;
   }
 
-  private static Optional<Piece> victimOf(Position position, Move move) {
+  private static Optional<Piece> victimOf(PositionView position, Move move) {
     if (move instanceof Move.EnPassant) {
       return Optional.of(Piece.of(position.sideToMove().opposite(), PieceType.PAWN));
     }
-    return position.board().pieceOn(move.to());
+    return position.pieceOn(move.to());
   }
 
   private static int rank(PieceType type) {
@@ -72,7 +75,7 @@ final class MoveOrdering {
     };
   }
 
-  static boolean isCapture(Position position, Move move) {
-    return move instanceof Move.EnPassant || position.board().pieceOn(move.to()).isPresent();
+  static boolean isCapture(PositionView position, Move move) {
+    return move instanceof Move.EnPassant || position.pieceOn(move.to()).isPresent();
   }
 }
