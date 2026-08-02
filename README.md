@@ -47,7 +47,7 @@ your GUI of choice (Arena, Cute Chess, Lucas Chess, BanksiaGUI, and others):
 
 ```sh
 ./gradlew installDist
-# engine binary: build/install/ChessEngine/bin/ChessEngine
+# engine binary: engine/build/install/ChessEngine/bin/ChessEngine
 ```
 
 Point the GUI at that script as a UCI engine and play. The engine honors
