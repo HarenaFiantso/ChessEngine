@@ -104,11 +104,40 @@ begins from a fresh copy of its root. NegamaxSearch deliberately stays on
 the immutable apply path; the equivalence tests thereby prove the mutable
 fast path against an oracle that cannot share its bugs.
 
+## Null move pruning
+
+The first speculative cut, and a shift in kind: everything before it kept
+the search exact, this trades a sliver of exactness for a large slice of
+the tree. The bet is the null move observation: in almost every chess
+position, moving improves matters. So before searching a node's moves,
+give the opponent a free extra move and search the result shallower with
+a null window. If the mover still stands at or above beta after handing
+over the tempo, the real position, where the mover does get to move, will
+almost certainly clear beta too, and the node is pruned on the spot.
+
+The bet is off exactly where the observation fails. In check, passing
+would be illegal. In pawn-and-king endgames zugzwang is real, moving can
+only hurt, so the cut requires the mover to own at least one piece.
+Near mate scores the arithmetic of mate distances cannot be trusted from
+a reduced search, so those windows are exempt, which conveniently keeps
+open-window principal variation nodes unpruned. And two consecutive null
+moves would compare doing nothing with doing nothing, so a null search
+may not open with another null.
+
+Because the cut is speculative, the testing contract changed shape: the
+equivalence proof against the exhaustive reference now pins a
+configuration with null move pruning disabled, exactly as it already
+pinned a disabled transposition table, and the speculative configuration
+is held to what it actually promises. Measured on Kiwipete at fixed depth
+five: 42 percent fewer nodes, same score, same move. At depth three it
+never fires and at depth four it is a wash, which the tests record
+honestly by asserting at the depth where the technique starts paying.
+
 ## What is deliberately absent
 
-Aspiration windows, null-move pruning, and late move reductions. Each
-arrives as its own measured step; the node counter in SearchResult is the
-instrument those measurements use.
+Aspiration windows and late move reductions. Each arrives as its own
+measured step; the node counter in SearchResult is the instrument those
+measurements use.
 
 ## References
 
