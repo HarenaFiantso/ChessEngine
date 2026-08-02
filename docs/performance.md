@@ -18,14 +18,15 @@ benchmarks or do not get merged.
 | Position.apply (one move) | 0.034 us |
 | ClassicalEvaluator.evaluate | 0.18 us |
 | Zobrist.of | 0.16 us |
-| MoveGenerator.legalMoves (Kiwipete) | 15.2 us |
-| Perft(3) from the start | 2.8 ms |
-| Alpha-beta depth 4, fresh table | 65 ms |
+| MoveGenerator.legalMoves (Kiwipete) | 15.6 us |
+| Perft(3) from the start | 2.9 ms |
+| Alpha-beta depth 4, fresh table | 20 ms |
 
-Legal move generation dominates everything built on it. Its cost is the
-legality filter: every pseudo-legal candidate is applied (a board copy) and
-answered by isInCheck (a reverse attack scan). Roughly fifty candidates in a
-middlegame means legalMoves costs about fifty apply-and-check round trips.
+Move generation dominates everything built on it. Its cost is the legality
+filter: every pseudo-legal candidate is made, answered by isInCheck (a
+reverse attack scan), and unmade. Roughly fifty candidates in a middlegame
+means fifty make-and-check round trips per node, plus the pseudo-legal
+lists themselves.
 
 ## History
 
@@ -54,19 +55,30 @@ three measured rounds: the first wiring regressed every benchmark because
 make paid for two set copies per move; int-bitmask rights made the path
 allocation-free. Perft(3) improved from 3.53ms to 2.83ms; legalMoves stayed
 at par because the per-call scratch copy offsets the per-candidate gain;
-search awaits its own migration, which this infrastructure now enables.
+search awaited its own migration, which this infrastructure enabled.
+
+The search migration followed and delivered the payoff: alpha-beta and
+quiescence now walk one scratch copy of the root with make and unmake,
+generate pseudo-legal moves and fold the legality test into the tree walk
+(each candidate is made exactly once, serving both the check test and the
+recursion), and feed the transposition table from the incrementally
+maintained key instead of a sixty-four-square rescan per node. Depth-four
+search fell from 65ms to 20ms, three and a quarter times faster, with every
+other benchmark at par; the same half-second budget that reached depth four
+before now completes depth five. The exhaustive reference search
+deliberately stays on the immutable path, so the equivalence tests prove
+the fast path against an oracle that cannot share its bugs.
 
 ## The roadmap this motivates
 
-The object model pays for its clarity in exactly one place: the
-apply-per-candidate legality filter. The measured path forward, in order of
-expected yield per unit of disruption:
+With make and unmake now under both perft and search, the object model pays
+for its clarity in exactly one place: the make-per-candidate legality
+filter. The measured path forward, in order of expected yield per unit of
+disruption:
 
-1. Make/unmake with incremental Zobrist keys: mutate one board, undo on
-   backtrack, update the hash by XOR instead of rescanning.
-2. Pin-aware legality: generate strictly legal moves directly and skip the
+1. Pin-aware legality: generate strictly legal moves directly and skip the
    filter for the majority of moves that provably cannot expose the king.
-3. Bitboards: piece-centric sets with precomputed attack tables, the
+2. Bitboards: piece-centric sets with precomputed attack tables, the
    endgame of this progression and the reason Square.index has been
    bitboard-compatible since iteration two.
 
