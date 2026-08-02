@@ -105,6 +105,23 @@ class MoveOrderingTest {
   }
 
   @Test
+  void killersOutrankLosingCaptures() {
+    Position position = Fen.parse("k7/8/2p5/3p4/8/8/8/3QK3 w - - 0 1");
+    MoveOrdering ordering = new MoveOrdering();
+    Move quiet = new Move.Normal(Square.E1, Square.E2);
+    ordering.rememberCutoff(position, quiet, 4, 3);
+    List<Move> ordered = ordered(ordering, position, 3);
+    assertTrue(ordered.indexOf(quiet) < ordered.indexOf(new Move.Normal(Square.D1, Square.D5)));
+  }
+
+  @Test
+  void losingCapturesStillPrecedeUncreditedQuietMoves() {
+    Position position = Fen.parse("k7/8/2p5/3p4/8/8/8/3QK3 w - - 0 1");
+    List<Move> ordered = ordered(new MoveOrdering(), position, 0);
+    assertEquals(new Move.Normal(Square.D1, Square.D5), ordered.getFirst());
+  }
+
+  @Test
   void captureCutoffsLeaveTheQuietTablesAlone() {
     Position position = Fen.parse("k7/8/8/3p4/8/8/8/3RK3 w - - 0 1");
     MoveOrdering ordering = new MoveOrdering();

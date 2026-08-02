@@ -14,6 +14,7 @@ import org.saitama.board.Square;
 import org.saitama.evaluation.Evaluator;
 import org.saitama.rules.Attacks;
 import org.saitama.rules.MoveGenerator;
+import org.saitama.rules.StaticExchange;
 
 /**
  * Negamax with alpha-beta pruning: identical answers to the exhaustive search from a fraction of
@@ -39,10 +40,12 @@ import org.saitama.rules.MoveGenerator;
  * zugzwang lurks, and near mate scores. Late move reductions lean on ordering quality instead: once
  * the remembered best move, the captures, and the killers have been searched, the quiet stragglers
  * almost never raise alpha, so they are first searched one ply shallower with a null window, and
- * only a surprise there earns the full-depth, full-window search. Neither cut is exact, so the
- * equivalence proof against the reference search pins a configuration with both disabled, and
- * separate tests hold the speculative configuration to what it actually promises: far fewer nodes
- * and the same mates and best moves where it matters.
+ * only a surprise there earns the full-depth, full-window search. Quiescence adds a third: captures
+ * that static exchange evaluation calls losing are skipped outright, because resolving a capture
+ * chain that sheds material rarely improves on standing pat. None of these cuts is exact, so the
+ * equivalence proof against the reference search pins a configuration with all of them disabled,
+ * and separate tests hold the speculative configuration to what it actually promises: far fewer
+ * nodes and the same mates and best moves where it matters.
  */
 public final class AlphaBetaSearch implements SearchAlgorithm {
 
@@ -265,7 +268,10 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     List<Move> candidates =
         inCheck
             ? pseudoLegal
-            : pseudoLegal.stream().filter(move -> MoveOrdering.isCapture(position, move)).toList();
+            : pseudoLegal.stream()
+                .filter(move -> MoveOrdering.isCapture(position, move))
+                .filter(move -> !speculativePruning || StaticExchange.evaluate(position, move) >= 0)
+                .toList();
     Color mover = position.sideToMove();
     int legalTried = 0;
     for (Move move : ordering.byPromise(position, candidates, Optional.empty(), ply)) {
