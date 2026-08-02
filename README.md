@@ -86,6 +86,11 @@ tested, documented, and committed before the next begins.
   [Conventional Commits](https://www.conventionalcommits.org/).
 - Every non-obvious decision is documented, in code or in decision records.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md): one focused change per branch,
+every commit green, benchmarks behind every performance claim.
+
 ## License
 
 Saitama is free software, released under the
