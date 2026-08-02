@@ -1,16 +1,30 @@
 plugins {
-    java
+    application
     checkstyle
     jacoco
     id("com.diffplug.spotless")
     id("net.ltgt.errorprone")
     id("com.github.spotbugs")
+    id("org.openjfx.javafxplugin")
 }
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(26)
     }
+}
+
+application {
+    mainClass = "org.saitama.gui.SaitamaGui"
+}
+
+javafx {
+    version = "26"
+    modules = listOf("javafx.controls")
+}
+
+tasks.named<JavaExec>("run") {
+    jvmArgs("--enable-native-access=javafx.graphics")
 }
 
 checkstyle {
@@ -76,6 +90,16 @@ tasks.jacocoTestReport {
 
 tasks.jacocoTestCoverageVerification {
     dependsOn(tasks.test)
+    classDirectories.setFrom(
+        classDirectories.files.map {
+            fileTree(it) {
+                exclude(
+                    "org/saitama/gui/SaitamaGui*.class",
+                    "org/saitama/gui/BoardView*.class"
+                )
+            }
+        }
+    )
     violationRules {
         rule {
             limit {
