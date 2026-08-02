@@ -4,4 +4,4 @@ plugins {
 
 rootProject.name = "ChessEngine"
 
-include("engine")
+include("engine", "gui")
