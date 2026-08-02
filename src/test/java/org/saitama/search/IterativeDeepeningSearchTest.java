@@ -59,9 +59,33 @@ class IterativeDeepeningSearchTest {
     assertThrows(IllegalArgumentException.class, () -> SearchLimits.depth(0));
     assertThrows(
         IllegalArgumentException.class, () -> SearchLimits.moveTime(Duration.ofMillis(-1)));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> new SearchLimits(java.util.OptionalInt.empty(), java.util.Optional.empty()));
+  }
+
+  @Test
+  void unlimitedLimitsBindNeitherDepthNorTime() {
+    assertTrue(SearchLimits.unlimited().maxDepth().isEmpty());
+    assertTrue(SearchLimits.unlimited().maxMoveTime().isEmpty());
+  }
+
+  @Test
+  void anAlreadyFiredStopSignalStillYieldsTheDepthOneMove() {
+    SearchResult result =
+        deepening().search(Fen.parse(Fen.STARTING), SearchLimits.unlimited(), () -> true);
+    assertTrue(result.bestMove().isPresent());
+    assertEquals(1, result.depth());
+  }
+
+  @Test
+  void stopSignalsFiringMidSearchEndTheUnlimitedDeepening() {
+    AtomicLong polls = new AtomicLong();
+    SearchResult result =
+        deepening()
+            .search(
+                Fen.parse(Fen.STARTING),
+                SearchLimits.unlimited(),
+                () -> polls.incrementAndGet() > 10_000);
+    assertTrue(result.bestMove().isPresent());
+    assertTrue(result.depth() >= 1);
   }
 
   @Test

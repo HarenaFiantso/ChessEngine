@@ -6,20 +6,21 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * What may stop a search: a depth ceiling, a time budget, or both.
+ * What may stop a search: a depth ceiling, a time budget, both, or neither.
+ *
+ * <p>Limits with neither bound express the UCI {@code go infinite} contract: only an external stop
+ * signal, or the deepening search's own internal depth ceiling, ends the search. Callers passing
+ * unlimited limits without a stop signal accept searching to that ceiling.
  *
  * @param maxDepth deepest iteration to complete, if bounded
  * @param maxMoveTime wall-clock budget for the whole search, if bounded
  */
 public record SearchLimits(OptionalInt maxDepth, Optional<Duration> maxMoveTime) {
 
-  /** Validates that at least one limit exists and that present limits are sensible. */
+  /** Validates that present limits are sensible. */
   public SearchLimits {
     Objects.requireNonNull(maxDepth, "maxDepth");
     Objects.requireNonNull(maxMoveTime, "maxMoveTime");
-    if (maxDepth.isEmpty() && maxMoveTime.isEmpty()) {
-      throw new IllegalArgumentException("A search needs at least one limit");
-    }
     if (maxDepth.isPresent() && maxDepth.getAsInt() < 1) {
       throw new IllegalArgumentException("Depth limits start at one: " + maxDepth.getAsInt());
     }
@@ -41,5 +42,10 @@ public record SearchLimits(OptionalInt maxDepth, Optional<Duration> maxMoveTime)
   /** Returns limits that stop at whichever of {@code depth} and {@code moveTime} comes first. */
   public static SearchLimits of(int depth, Duration moveTime) {
     return new SearchLimits(OptionalInt.of(depth), Optional.of(moveTime));
+  }
+
+  /** Returns limits that bind neither depth nor time, leaving the stop to an external signal. */
+  public static SearchLimits unlimited() {
+    return new SearchLimits(OptionalInt.empty(), Optional.empty());
   }
 }
