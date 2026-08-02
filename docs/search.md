@@ -80,6 +80,26 @@ SearchLimits speaks the vocabulary the UCI go command maps onto: a depth
 ceiling, a move-time budget, or both. Allocating a budget from a full game
 clock is policy that arrives with the UCI layer itself.
 
+## Walking the tree with make and unmake
+
+The pruning search walks the whole tree on one mutable scratch copy of the
+root: each candidate move is made, the mover's king is tested for exposure,
+the child is searched, and the move is unmade on backtrack. Nothing per node
+copies a board, and the transposition table reads the incrementally
+maintained Zobrist key instead of rescanning sixty-four squares. Legality is
+discovered move by move rather than up front, which relocates terminal
+detection: checkmate and stalemate reveal themselves only after the move
+loop finds nothing legal to play, and the quiescence stand-pat must first
+prove some legal move exists, because a stalemate is a draw no matter how
+good the static evaluation looks. The probe is cheap: it stops at the first
+legal move, usually the first one tried.
+
+An aborted search abandons the scratch copy mid-line. That is safe, not
+sloppy: the aborted iteration is discarded entirely and the next search
+begins from a fresh copy of its root. NegamaxSearch deliberately stays on
+the immutable apply path; the equivalence tests thereby prove the mutable
+fast path against an oracle that cannot share its bugs.
+
 ## What is deliberately absent
 
 Aspiration windows, null-move pruning, and late move reductions. Each
