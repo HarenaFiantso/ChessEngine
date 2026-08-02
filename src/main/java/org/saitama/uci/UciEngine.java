@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import org.saitama.board.Color;
 import org.saitama.board.Position;
@@ -26,9 +27,12 @@ import org.saitama.search.SearchResult;
  * and they exchange plain text.
  *
  * <p>The engine answers {@code uci}, {@code isready}, {@code ucinewgame}, {@code position}, {@code
- * go}, and {@code quit}, and ignores everything else as the protocol requires. Searching is
- * synchronous: {@code go} computes within its limits and answers {@code bestmove}; a bare or
- * infinite {@code go} falls back to a default budget rather than searching forever.
+ * go}, {@code stop}, and {@code quit}, and ignores everything else as the protocol requires.
+ * Searching runs on its own worker thread, so the command loop stays responsive while the engine
+ * thinks: {@code isready} answers immediately, {@code go infinite} searches until {@code stop}
+ * arrives, and {@code stop} or {@code quit} ends the search and waits for its {@code bestmove}. One
+ * search runs at a time; a {@code go} during a search is rejected with an info string. The search
+ * reads immutable snapshots taken when it starts, so later commands cannot corrupt it.
  */
 public final class UciEngine {
 
@@ -40,8 +44,10 @@ public final class UciEngine {
 
   private final BufferedReader input;
   private final Consumer<String> output;
+  private final AtomicBoolean stopRequested = new AtomicBoolean();
   private IterativeDeepeningSearch search = freshSearch();
   private Game game = Game.startingWith(Fen.parse(Fen.STARTING));
+  private Thread searchWorker;
 
   /** Creates an engine reading commands from {@code input} and answering through {@code output}. */
   public UciEngine(Reader input, Consumer<String> output) {
@@ -53,9 +59,10 @@ public final class UciEngine {
   public void run() throws IOException {
     for (String line = input.readLine(); line != null; line = input.readLine()) {
       if (!handle(line.strip())) {
-        return;
+        break;
       }
     }
+    haltSearch();
   }
 
   private boolean handle(String line) {
@@ -70,6 +77,7 @@ public final class UciEngine {
         case "ucinewgame" -> resetForNewGame();
         case "position" -> handlePosition(tokens);
         case "go" -> handleGo(tokens);
+        case "stop" -> haltSearch();
         case "quit" -> {
           return false;
         }
@@ -112,7 +120,20 @@ public final class UciEngine {
   }
 
   private void handleGo(List<String> tokens) {
-    SearchResult result = search.search(game.position(), limitsFrom(tokens));
+    if (searchWorker != null && searchWorker.isAlive()) {
+      throw new IllegalStateException("a search is already running; send stop first");
+    }
+    SearchLimits limits = limitsFrom(tokens);
+    Position position = game.position();
+    IterativeDeepeningSearch active = search;
+    stopRequested.set(false);
+    searchWorker =
+        new Thread(
+            () -> announce(active.search(position, limits, stopRequested::get)), "saitama-search");
+    searchWorker.start();
+  }
+
+  private void announce(SearchResult result) {
     output.accept(
         "info depth "
             + result.depth()
@@ -123,7 +144,23 @@ public final class UciEngine {
     output.accept("bestmove " + result.bestMove().map(UciMoves::format).orElse(NULL_MOVE));
   }
 
+  private void haltSearch() {
+    stopRequested.set(true);
+    if (searchWorker == null) {
+      return;
+    }
+    try {
+      searchWorker.join();
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+    }
+    searchWorker = null;
+  }
+
   private SearchLimits limitsFrom(List<String> tokens) {
+    if (tokens.contains("infinite")) {
+      return SearchLimits.unlimited();
+    }
     Map<String, Long> numbers = new HashMap<>();
     for (int i = 1; i + 1 < tokens.size(); i++) {
       String value = tokens.get(i + 1);

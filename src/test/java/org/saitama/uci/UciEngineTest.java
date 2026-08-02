@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.saitama.board.Move;
@@ -16,7 +17,7 @@ import org.saitama.rules.MoveGenerator;
 class UciEngineTest {
 
   private static List<String> dialogue(String script) throws IOException {
-    List<String> answers = new ArrayList<>();
+    List<String> answers = Collections.synchronizedList(new ArrayList<>());
     new UciEngine(new StringReader(script), answers::add).run();
     return answers;
   }
@@ -85,5 +86,36 @@ class UciEngineTest {
   @Test
   void ignoresUnknownCommands() throws IOException {
     assertEquals(List.of("readyok"), dialogue("xyzzy\nisready\nquit\n"));
+  }
+
+  @Test
+  void stopEndsAnInfiniteSearchWithTheBestMoveSoFar() throws IOException {
+    List<String> answers = dialogue("position startpos\ngo infinite\nstop\nquit\n");
+    assertTrue(answers.getLast().startsWith("bestmove "));
+  }
+
+  @Test
+  void staysResponsiveWhileSearching() throws IOException {
+    List<String> answers = dialogue("go infinite\nisready\nstop\nquit\n");
+    assertTrue(answers.getLast().startsWith("bestmove "));
+    assertTrue(answers.indexOf("readyok") < answers.size() - 1);
+  }
+
+  @Test
+  void rejectsOverlappingSearches() throws IOException {
+    List<String> answers = dialogue("go infinite\ngo infinite\nstop\nquit\n");
+    assertTrue(answers.stream().anyMatch(line -> line.startsWith("info string rejected")));
+    assertEquals(1, answers.stream().filter(line -> line.startsWith("bestmove")).count());
+  }
+
+  @Test
+  void stopOutsideSearchesChangesNothing() throws IOException {
+    assertEquals(List.of("readyok"), dialogue("stop\nisready\nquit\n"));
+  }
+
+  @Test
+  void endOfInputEndsRunningSearches() throws IOException {
+    List<String> answers = dialogue("go infinite\n");
+    assertTrue(answers.getLast().startsWith("bestmove "));
   }
 }
