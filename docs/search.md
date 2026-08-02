@@ -179,12 +179,34 @@ five: 42 percent fewer nodes, same score, same move. At depth three it
 never fires and at depth four it is a wash, which the tests record
 honestly by asserting at the depth where the technique starts paying.
 
+## Late move reductions
+
+The third speculative technique closes the loop the ordering work opened.
+If ordering is trustworthy, then by the time the remembered best move, the
+captures, the killers, and the credited quiets have been searched, the
+moves at the back of the list almost never raise alpha. Late move
+reductions act on that: quiet stragglers, beyond the first three legal
+moves at a node, are first searched one ply shallower with a null window,
+a cheap test of the hypothesis that they change nothing. A straggler that
+surprises, scoring above alpha even reduced, immediately earns the full
+depth and full window, so a mistaken reduction costs one extra shallow
+search rather than the truth.
+
+The cut is off wherever shallowness lies: for captures and promotions,
+whose tactics are the point; in check and for checking moves, where
+forcing lines need full depth; and below depth three, where there is
+nothing to reduce. It waited deliberately for the killer and history work,
+because reducing late moves is only safe once late means unpromising
+rather than merely unlucky in generation order. Measured at depth six the
+complement is visible: the tactical Kiwipete middlegame, where quiet
+stragglers abound, gave up 47 percent of its nodes, the endgame 28, the
+already-tiny quiet opening 14, with identical scores and moves throughout.
+
 ## What is deliberately absent
 
-Late move reductions, which lean on ordering quality and so waited for the
-killer and history work, and static exchange evaluation for capture
-ordering. Each arrives as its own measured step; the node counter in
-SearchResult is the instrument those measurements use.
+Static exchange evaluation for capture ordering, and depth-adaptive
+reduction amounts. Each arrives as its own measured step; the node counter
+in SearchResult is the instrument those measurements use.
 
 ## References
 
