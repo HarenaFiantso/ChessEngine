@@ -15,7 +15,9 @@ java {
 }
 
 application {
-    mainClass = "org.saitama.gui.SaitamaGui"
+    mainClass = "org.saitama.gui.Launcher"
+    applicationName = "Saitama"
+    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
 }
 
 javafx {
@@ -95,7 +97,8 @@ tasks.jacocoTestCoverageVerification {
             fileTree(it) {
                 exclude(
                     "org/saitama/gui/SaitamaGui*.class",
-                    "org/saitama/gui/BoardView*.class"
+                    "org/saitama/gui/BoardView*.class",
+                    "org/saitama/gui/Launcher*.class"
                 )
             }
         }

@@ -56,11 +56,6 @@ public final class SaitamaGui extends Application {
   private boolean engineThinking;
   private int gameGeneration;
 
-  /** Launches the interface. */
-  public static void main(String[] args) {
-    launch(args);
-  }
-
   @Override
   public void start(Stage stage) {
     board = new BoardView(this::onSquareClicked);
