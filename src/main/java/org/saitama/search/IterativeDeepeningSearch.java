@@ -41,8 +41,20 @@ public final class IterativeDeepeningSearch implements SearchAlgorithm {
 
   /** Searches {@code position} until {@code limits} call time. */
   public SearchResult search(Position position, SearchLimits limits) {
+    return search(position, limits, IterativeDeepeningSearch::neverStop);
+  }
+
+  /**
+   * Searches {@code position} until {@code limits} call time or {@code stopSignal} fires.
+   *
+   * <p>The signal is how another thread ends a search that has no bound of its own, which is the
+   * UCI {@code stop} command. Depth one still always completes, so a firing signal never costs the
+   * guaranteed legal move.
+   */
+  public SearchResult search(Position position, SearchLimits limits, BooleanSupplier stopSignal) {
     Objects.requireNonNull(position, "position");
     Objects.requireNonNull(limits, "limits");
+    Objects.requireNonNull(stopSignal, "stopSignal");
     long startNanos = nanoTime.getAsLong();
     BooleanSupplier expired =
         limits
@@ -50,15 +62,16 @@ public final class IterativeDeepeningSearch implements SearchAlgorithm {
             .<BooleanSupplier>map(
                 budget -> () -> nanoTime.getAsLong() - startNanos >= budget.toNanos())
             .orElse(IterativeDeepeningSearch::neverStop);
+    BooleanSupplier halted = () -> stopSignal.getAsBoolean() || expired.getAsBoolean();
     int deepest = limits.maxDepth().orElse(UNLIMITED_DEPTH);
     SearchResult best = delegate.search(position, 1);
     long totalNodes = best.nodes();
     for (int depth = 2; depth <= deepest; depth++) {
-      if (Math.abs(best.score()) > Scores.MATE_THRESHOLD || expired.getAsBoolean()) {
+      if (Math.abs(best.score()) > Scores.MATE_THRESHOLD || halted.getAsBoolean()) {
         break;
       }
       try {
-        SearchResult result = delegate.search(position, depth, expired);
+        SearchResult result = delegate.search(position, depth, halted);
         totalNodes += result.nodes();
         best = new SearchResult(result.bestMove(), result.score(), totalNodes, depth);
       } catch (SearchAborted aborted) {
