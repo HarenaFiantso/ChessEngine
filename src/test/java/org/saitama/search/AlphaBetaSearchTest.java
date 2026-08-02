@@ -25,7 +25,10 @@ class AlphaBetaSearchTest {
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, 2",
     "4k3/8/4p3/3p4/8/8/8/3QK3 w - - 0 1, 2",
     "7k/8/8/8/8/8/1R6/R5K1 w - - 0 1, 3",
-    "4k3/8/8/3q4/8/8/8/3RK3 w - - 0 1, 2"
+    "4k3/8/8/3q4/8/8/8/3RK3 w - - 0 1, 2",
+    "7k/8/6Q1/8/8/8/8/6K1 w - - 0 1, 2",
+    "7k/8/8/8/8/8/1R6/R5K1 w - - 99 70, 2",
+    "4k3/8/8/8/8/8/8/4RK2 b - - 0 1, 2"
   })
   void pruningAloneMatchesTheExhaustiveScoreExactly(String record, int depth) {
     SearchResult pruned = pruningOnly.search(Fen.parse(record), depth);
