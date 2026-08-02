@@ -42,14 +42,17 @@ final class MoveOrdering {
 
   List<Move> byPromise(
       PositionView position, List<Move> moves, Optional<Move> rememberedBest, int ply) {
+    record Scored(Move move, int promise) {}
     return moves.stream()
-        .sorted(
-            Comparator.comparingInt(
-                    (Move move) ->
-                        rememberedBest.filter(move::equals).isPresent()
-                            ? REMEMBERED_BEST_BONUS
-                            : promise(position, move, ply))
-                .reversed())
+        .map(
+            move ->
+                new Scored(
+                    move,
+                    rememberedBest.filter(move::equals).isPresent()
+                        ? REMEMBERED_BEST_BONUS
+                        : promise(position, move, ply)))
+        .sorted(Comparator.comparingInt(Scored::promise).reversed())
+        .map(Scored::move)
         .toList();
   }
 
