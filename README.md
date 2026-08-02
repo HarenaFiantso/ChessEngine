@@ -85,3 +85,10 @@ tested, documented, and committed before the next begins.
 - One logical change per commit, following
   [Conventional Commits](https://www.conventionalcommits.org/).
 - Every non-obvious decision is documented, in code or in decision records.
+
+## License
+
+Saitama is free software, released under the
+[GNU General Public License, version 3](LICENSE). The Cburnett piece
+images in the interface are by Colin M.L. Burnett, used under
+[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
