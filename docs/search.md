@@ -77,8 +77,12 @@ is guaranteed under any budget, and a forced mate stops the deepening early.
 The clock is injected as a supplier, so tests drive time deterministically.
 
 SearchLimits speaks the vocabulary the UCI go command maps onto: a depth
-ceiling, a move-time budget, or both. Allocating a budget from a full game
-clock is policy that arrives with the UCI layer itself.
+ceiling, a move-time budget, both, or neither, where unlimited limits leave
+the stop to an external signal, the shape of go infinite. The deepening
+search accepts that signal alongside its limits so another thread can end
+it mid-flight without costing the guaranteed depth-one move. Allocating a
+budget from a full game clock is policy that arrives with the UCI layer
+itself.
 
 ## Walking the tree with make and unmake
 
