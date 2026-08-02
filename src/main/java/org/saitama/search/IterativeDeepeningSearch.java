@@ -15,13 +15,23 @@ import org.saitama.board.Position;
  * start. In exchange the search becomes an anytime algorithm: a fully searched move is always in
  * hand when the clock fires, which is what real play requires. Depth one always completes
  * regardless of budget so a legal move is guaranteed.
+ *
+ * <p>Deepening also funds a second bet: each iteration knows the previous score, so instead of
+ * searching with an unbounded window it aspires to a narrow one around that score, which prunes
+ * harder everywhere. A score landing on or outside the window's edge is only a bound, so the
+ * iteration re-searches with the full window; the gamble costs a re-search when scores swing, and
+ * pays everywhere they do not. Mate scores are never aspired around, because their arithmetic is
+ * distance, not evaluation.
  */
 public final class IterativeDeepeningSearch implements SearchAlgorithm {
 
   private static final int UNLIMITED_DEPTH = 64;
 
+  private static final int ASPIRATION_MARGIN = 50;
+
   private final AlphaBetaSearch delegate;
   private final LongSupplier nanoTime;
+  private final boolean aspirationWindows;
 
   /** Creates a deepening search over {@code delegate}, timing itself with the system clock. */
   public IterativeDeepeningSearch(AlphaBetaSearch delegate) {
@@ -30,8 +40,18 @@ public final class IterativeDeepeningSearch implements SearchAlgorithm {
 
   /** Creates a deepening search over {@code delegate}, timing itself with {@code nanoTime}. */
   public IterativeDeepeningSearch(AlphaBetaSearch delegate, LongSupplier nanoTime) {
+    this(delegate, nanoTime, true);
+  }
+
+  /**
+   * Creates a deepening search with aspiration windows switchable, which only measurement and
+   * comparison tests need.
+   */
+  IterativeDeepeningSearch(
+      AlphaBetaSearch delegate, LongSupplier nanoTime, boolean aspirationWindows) {
     this.delegate = Objects.requireNonNull(delegate, "delegate");
     this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
+    this.aspirationWindows = aspirationWindows;
   }
 
   @Override
@@ -71,7 +91,7 @@ public final class IterativeDeepeningSearch implements SearchAlgorithm {
         break;
       }
       try {
-        SearchResult result = delegate.search(position, depth, halted);
+        SearchResult result = searchAtDepth(position, depth, halted, best.score());
         totalNodes += result.nodes();
         best = new SearchResult(result.bestMove(), result.score(), totalNodes, depth);
       } catch (SearchAborted aborted) {
@@ -79,6 +99,22 @@ public final class IterativeDeepeningSearch implements SearchAlgorithm {
       }
     }
     return new SearchResult(best.bestMove(), best.score(), totalNodes, best.depth());
+  }
+
+  private SearchResult searchAtDepth(
+      Position position, int depth, BooleanSupplier halted, int previousScore) {
+    if (!aspirationWindows || Math.abs(previousScore) > Scores.MATE_THRESHOLD) {
+      return delegate.search(position, depth, halted);
+    }
+    int alpha = previousScore - ASPIRATION_MARGIN;
+    int beta = previousScore + ASPIRATION_MARGIN;
+    SearchResult guess = delegate.search(position, depth, halted, alpha, beta);
+    if (guess.score() > alpha && guess.score() < beta) {
+      return guess;
+    }
+    SearchResult certain = delegate.search(position, depth, halted);
+    return new SearchResult(
+        certain.bestMove(), certain.score(), guess.nodes() + certain.nodes(), certain.depth());
   }
 
   private static boolean neverStop() {

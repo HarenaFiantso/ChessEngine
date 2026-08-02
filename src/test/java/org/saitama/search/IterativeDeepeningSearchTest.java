@@ -16,13 +16,29 @@ class IterativeDeepeningSearchTest {
     return new IterativeDeepeningSearch(new AlphaBetaSearch(new ClassicalEvaluator()));
   }
 
+  private static IterativeDeepeningSearch exactDeepening() {
+    return new IterativeDeepeningSearch(
+        new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled(), false),
+        System::nanoTime,
+        true);
+  }
+
   @Test
   void depthLimitedDeepeningMatchesTheDirectSearch() {
-    SearchResult deepened = deepening().search(Fen.parse(Fen.STARTING), SearchLimits.depth(3));
+    SearchResult deepened = exactDeepening().search(Fen.parse(Fen.STARTING), SearchLimits.depth(3));
     SearchResult direct =
-        new AlphaBetaSearch(new ClassicalEvaluator()).search(Fen.parse(Fen.STARTING), 3);
+        new AlphaBetaSearch(new ClassicalEvaluator(), TranspositionTable.disabled(), false)
+            .search(Fen.parse(Fen.STARTING), 3);
     assertEquals(direct.score(), deepened.score());
     assertEquals(3, deepened.depth());
+  }
+
+  @Test
+  void aspirationMissesRepairThemselvesWithTheFullWindow() {
+    SearchResult deepened =
+        exactDeepening()
+            .search(Fen.parse("7k/8/8/8/8/8/1R6/R5K1 w - - 0 1"), SearchLimits.depth(3));
+    assertEquals(Scores.MATE - 3, deepened.score());
   }
 
   @Test

@@ -89,6 +89,21 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
    * @throws SearchAborted if {@code stop} fires; the caller must discard this iteration
    */
   SearchResult search(Position position, int depth, BooleanSupplier stop) {
+    return search(position, depth, stop, -Scores.INFINITY, Scores.INFINITY);
+  }
+
+  /**
+   * Searches the root inside the window [{@code alpha}, {@code beta}], the primitive beneath
+   * aspiration windows.
+   *
+   * <p>The result is fail-soft: a score strictly inside the window is exact, a score at or below
+   * {@code alpha} means the truth is at most that, and a score at or above {@code beta} means the
+   * truth is at least that. On either miss the caller must re-search with a wider window before
+   * trusting the move.
+   *
+   * @throws SearchAborted if {@code stop} fires; the caller must discard this iteration
+   */
+  SearchResult search(Position position, int depth, BooleanSupplier stop, int alpha, int beta) {
     Objects.requireNonNull(position, "position");
     this.stopSignal = Objects.requireNonNull(stop, "stop");
     if (depth < 1) {
@@ -100,11 +115,15 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     int bestScore = -Scores.INFINITY;
     for (Move move : MoveOrdering.byPromise(position, MoveGenerator.legalMoves(position))) {
       MutablePosition.Undo undo = current.make(move);
-      int score = -alphaBeta(current, depth - 1, -Scores.INFINITY, -bestScore, 1, true);
+      int floor = Math.max(alpha, bestScore);
+      int score = -alphaBeta(current, depth - 1, -beta, -floor, 1, true);
       current.unmake(move, undo);
       if (score > bestScore) {
         bestScore = score;
         bestMove = Optional.of(move);
+      }
+      if (bestScore >= beta) {
+        break;
       }
     }
     if (bestMove.isEmpty()) {

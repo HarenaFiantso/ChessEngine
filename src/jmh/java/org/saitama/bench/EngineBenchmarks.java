@@ -83,4 +83,15 @@ public class EngineBenchmarks {
   public long perftThree() {
     return Perft.count(startingPosition, 3);
   }
+
+  /**
+   * The full thinking loop a real move uses: iterative deepening to depth six from the start with a
+   * fresh transposition table per call, aspiration windows and null move pruning included.
+   */
+  @Benchmark
+  public org.saitama.search.SearchResult deepeningDepthSix() {
+    return new org.saitama.search.IterativeDeepeningSearch(
+            new org.saitama.search.AlphaBetaSearch(new ClassicalEvaluator()))
+        .search(startingPosition, org.saitama.search.SearchLimits.depth(6));
+  }
 }
