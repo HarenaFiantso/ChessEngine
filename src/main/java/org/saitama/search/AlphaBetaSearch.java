@@ -7,7 +7,10 @@ import java.util.function.BooleanSupplier;
 import org.saitama.board.Color;
 import org.saitama.board.Move;
 import org.saitama.board.MutablePosition;
+import org.saitama.board.Piece;
+import org.saitama.board.PieceType;
 import org.saitama.board.Position;
+import org.saitama.board.Square;
 import org.saitama.evaluation.Evaluator;
 import org.saitama.rules.Attacks;
 import org.saitama.rules.MoveGenerator;
@@ -27,6 +30,15 @@ import org.saitama.rules.MoveGenerator;
  * and stalemate reveal themselves only after the loop finds nothing legal to play. An aborted
  * search abandons the scratch copy mid-line, which is safe because the next search starts from a
  * fresh copy. Instances are not thread-safe; each search runs on one thread.
+ *
+ * <p>On top of the exact pruning sits one speculative cut, null move pruning: give the opponent a
+ * free extra move, search the result shallower and with a null window, and if the mover still
+ * stands at or above beta, trust that the real position would too and prune. The bet rests on the
+ * observation that in almost every chess position moving improves matters; it is off in check,
+ * without a minor or major piece for the mover, where zugzwang lurks, and near mate scores. Unlike
+ * alpha-beta itself the cut is not exact, so the equivalence proof against the reference search
+ * pins a configuration with it disabled, and separate tests hold the speculative configuration to
+ * what it actually promises: far fewer nodes and the same mates and best moves where it matters.
  */
 public final class AlphaBetaSearch implements SearchAlgorithm {
 
@@ -34,22 +46,36 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
 
   private static final int DEFAULT_TABLE_CAPACITY = 1 << 16;
 
+  private static final int NULL_MOVE_MIN_DEPTH = 3;
+
+  private static final int NULL_MOVE_REDUCTION = 2;
+
   private final Evaluator evaluator;
   private final TranspositionTable table;
+  private final boolean nullMovePruning;
   private long nodes;
   private BooleanSupplier stopSignal = AlphaBetaSearch::neverStop;
 
   /** Creates a search judging leaves with {@code evaluator} and a default transposition table. */
   public AlphaBetaSearch(Evaluator evaluator) {
-    this(evaluator, TranspositionTable.withCapacity(DEFAULT_TABLE_CAPACITY));
+    this(evaluator, TranspositionTable.withCapacity(DEFAULT_TABLE_CAPACITY), true);
   }
 
   /**
    * Creates a search judging leaves with {@code evaluator} and remembering nodes in {@code table}.
    */
   public AlphaBetaSearch(Evaluator evaluator, TranspositionTable table) {
+    this(evaluator, table, true);
+  }
+
+  /**
+   * Creates a search with null move pruning switchable, which only tests need: the equivalence
+   * proof against the exhaustive reference requires the exact pruning alone.
+   */
+  AlphaBetaSearch(Evaluator evaluator, TranspositionTable table, boolean nullMovePruning) {
     this.evaluator = Objects.requireNonNull(evaluator, "evaluator");
     this.table = Objects.requireNonNull(table, "table");
+    this.nullMovePruning = nullMovePruning;
   }
 
   @Override
@@ -74,7 +100,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     int bestScore = -Scores.INFINITY;
     for (Move move : MoveOrdering.byPromise(position, MoveGenerator.legalMoves(position))) {
       MutablePosition.Undo undo = current.make(move);
-      int score = -alphaBeta(current, depth - 1, -Scores.INFINITY, -bestScore, 1);
+      int score = -alphaBeta(current, depth - 1, -Scores.INFINITY, -bestScore, 1, true);
       current.unmake(move, undo);
       if (score > bestScore) {
         bestScore = score;
@@ -87,7 +113,8 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     return new SearchResult(bestMove, bestScore, nodes, depth);
   }
 
-  private int alphaBeta(MutablePosition position, int depth, int alpha, int beta, int ply) {
+  private int alphaBeta(
+      MutablePosition position, int depth, int alpha, int beta, int ply, boolean allowNull) {
     if (depth == 0) {
       return quiescence(position, alpha, beta, ply);
     }
@@ -111,6 +138,20 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
         return cachedScore;
       }
     }
+    if (nullMovePruning
+        && allowNull
+        && depth >= NULL_MOVE_MIN_DEPTH
+        && beta < Scores.MATE_THRESHOLD
+        && !Attacks.isInCheck(position)
+        && hasNonPawnMaterial(position)) {
+      MutablePosition.Undo undo = position.makeNull();
+      int refutation =
+          -alphaBeta(position, depth - 1 - NULL_MOVE_REDUCTION, -beta, -beta + 1, ply + 1, false);
+      position.unmakeNull(undo);
+      if (refutation >= beta && refutation < Scores.MATE_THRESHOLD) {
+        return refutation;
+      }
+    }
     int alphaAtEntry = alpha;
     int best = -Scores.INFINITY;
     Move bestMove = null;
@@ -125,7 +166,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
         continue;
       }
       legalMoves++;
-      int score = -alphaBeta(position, depth - 1, -beta, -alpha, ply + 1);
+      int score = -alphaBeta(position, depth - 1, -beta, -alpha, ply + 1, true);
       position.unmake(move, undo);
       if (score > best) {
         best = score;
@@ -209,6 +250,20 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
       return 0;
     }
     return -(Scores.MATE - ply);
+  }
+
+  private static boolean hasNonPawnMaterial(MutablePosition position) {
+    Color mover = position.sideToMove();
+    for (Square square : Square.values()) {
+      Optional<Piece> occupant = position.pieceOn(square);
+      if (occupant.isPresent()
+          && occupant.get().color() == mover
+          && occupant.get().type() != PieceType.PAWN
+          && occupant.get().type() != PieceType.KING) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean hasLegalMove(MutablePosition position, List<Move> pseudoLegalMoves) {
