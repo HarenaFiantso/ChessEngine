@@ -45,6 +45,27 @@ all. Measured on the depth-four opening search, ordering alone cut nodes
 from 8176 to 7102; its real value shows in tactical positions and inside
 quiescence trees, which are nothing but captures.
 
+Captures order themselves by inspection, but most positions are quiet, and
+ordering quiet moves needs memory of what worked. Two rememberers carry
+it. Killer moves are the last two quiet refuters at each ply: sibling
+nodes at one ply face the same threats, so the move that just refuted one
+sibling very often refutes the next, and trying it immediately after the
+captures collects the cutoff almost for free. The history table is the
+statistical complement, global rather than ply-local: every quiet refuter
+credits its side, origin, and destination with the square of the depth it
+refuted, so success at expensive nodes counts for more, and the
+accumulated credit orders the remaining quiet moves. Both tables survive
+across searches like the transposition table, so ordering knowledge keeps
+compounding while the game stays in similar territory.
+
+The payoff concentrates exactly where the old ordering was blind. At depth
+six from the start position, a quiet opening with barely a capture in
+sight, the tree shrank from 103842 nodes to 21230, five times smaller; the
+tactical Kiwipete middlegame, already well served by victim-and-attacker
+ranking, gave up eleven percent; scores and moves were identical
+throughout. Ordering never changes the answer, only how fast it arrives,
+which is why the equivalence proofs needed no re-pinning.
+
 ## Quiescence
 
 A fixed-depth search may evaluate a position in the middle of a capture
@@ -160,9 +181,10 @@ honestly by asserting at the depth where the technique starts paying.
 
 ## What is deliberately absent
 
-Late move reductions, killer moves, and history heuristics. Each arrives
-as its own measured step; the node counter in SearchResult is the
-instrument those measurements use.
+Late move reductions, which lean on ordering quality and so waited for the
+killer and history work, and static exchange evaluation for capture
+ordering. Each arrives as its own measured step; the node counter in
+SearchResult is the instrument those measurements use.
 
 ## References
 
