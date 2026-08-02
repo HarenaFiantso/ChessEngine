@@ -53,6 +53,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
   private final Evaluator evaluator;
   private final TranspositionTable table;
   private final boolean nullMovePruning;
+  private final MoveOrdering ordering = new MoveOrdering();
   private long nodes;
   private BooleanSupplier stopSignal = AlphaBetaSearch::neverStop;
 
@@ -113,7 +114,9 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     MutablePosition current = MutablePosition.copyOf(position);
     Optional<Move> bestMove = Optional.empty();
     int bestScore = -Scores.INFINITY;
-    for (Move move : MoveOrdering.byPromise(position, MoveGenerator.legalMoves(position))) {
+    List<Move> rootMoves =
+        ordering.byPromise(position, MoveGenerator.legalMoves(position), Optional.empty(), 0);
+    for (Move move : rootMoves) {
       MutablePosition.Undo undo = current.make(move);
       int floor = Math.max(alpha, bestScore);
       int score = -alphaBeta(current, depth - 1, -beta, -floor, 1, true);
@@ -178,7 +181,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
     Color mover = position.sideToMove();
     Optional<Move> rememberedBest = remembered.flatMap(TranspositionTable.Entry::bestMove);
     List<Move> candidates = MoveGenerator.pseudoLegalMoves(position);
-    for (Move move : MoveOrdering.byPromise(position, candidates, rememberedBest)) {
+    for (Move move : ordering.byPromise(position, candidates, rememberedBest, ply)) {
       MutablePosition.Undo undo = position.make(move);
       if (Attacks.isInCheck(position, mover)) {
         position.unmake(move, undo);
@@ -192,6 +195,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
         bestMove = move;
       }
       if (best >= beta) {
+        ordering.rememberCutoff(position, move, depth, ply);
         break;
       }
       alpha = Math.max(alpha, best);
@@ -238,7 +242,7 @@ public final class AlphaBetaSearch implements SearchAlgorithm {
             : pseudoLegal.stream().filter(move -> MoveOrdering.isCapture(position, move)).toList();
     Color mover = position.sideToMove();
     int legalTried = 0;
-    for (Move move : MoveOrdering.byPromise(position, candidates)) {
+    for (Move move : ordering.byPromise(position, candidates, Optional.empty(), ply)) {
       MutablePosition.Undo undo = position.make(move);
       if (Attacks.isInCheck(position, mover)) {
         position.unmake(move, undo);
